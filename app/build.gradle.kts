@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.jeju_nongdi"
+    namespace = "com.example.jejunongdi"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.jeju_nongdi"
+        applicationId = "com.example.jejunongdi"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
