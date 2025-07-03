@@ -1,24 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jejunongdi/features/home/home_screen.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-
-Future<void> main() async { // async 키워드 추가
-  WidgetsFlutterBinding.ensureInitialized(); // Flutter 엔진 초기화 보장
-  await NaverMapSdk.instance.initialize( // 네이버 지도 SDK 초기화
-      clientId: 'dbf70fdp3p', // Client ID
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 네이버 지도 SDK 초기화
+  await NaverMapSdk.instance.initialize(
+      clientId: 'dbf70fdp3p',
       onAuthFailed: (ex) {
-        print("********* 네이버맵 인증오류 : $ex *********");
+        debugPrint("네이버맵 인증오류: $ex");
       });
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -42,7 +38,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
