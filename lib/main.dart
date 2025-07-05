@@ -1,24 +1,29 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_redux/flutter_redux.dart';
+import 'package:redux/redux.dart';
 import 'package:jejunongdi/features/home/home_screen.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+// Redux 관련 imports
+import 'package:jejunongdi/redux/app_state.dart';
+import 'package:jejunongdi/redux/store.dart' as redux_store;
 
-Future<void> main() async { // async 키워드 추가
-  WidgetsFlutterBinding.ensureInitialized(); // Flutter 엔진 초기화 보장
-  await NaverMapSdk.instance.initialize( // 네이버 지도 SDK 초기화
-      clientId: 'dbf70fdp3p', // Client ID
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Redux Store 초기화
+  redux_store.initializeStore();
+  
+  // 네이버 지도 SDK 초기화
+  await NaverMapSdk.instance.initialize(
+      clientId: 'dbf70fdp3p',
       onAuthFailed: (ex) {
-        print("********* 네이버맵 인증오류 : $ex *********");
+        debugPrint("네이버맵 인증오류: $ex");
       });
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -26,23 +31,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '제주농디',
-      theme: ThemeData(
-        primaryColor: const Color(0xFFFF8A3D),
-        scaffoldBackgroundColor: const Color(0xFFF7F6F2),
-        fontFamily: 'Pretendard',
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          foregroundColor: Color(0xFF333333),
+    // Redux StoreProvider로 앱 전체를 감싸기
+    return StoreProvider<AppState>(
+      store: redux_store.store,
+      child: MaterialApp(
+        title: '제주농디',
+        theme: ThemeData(
+          primaryColor: const Color(0xFFFF8A3D),
+          scaffoldBackgroundColor: const Color(0xFFF7F6F2),
+          fontFamily: 'Pretendard',
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            foregroundColor: Color(0xFF333333),
+          ),
         ),
+        home: const SplashScreen(),
       ),
-      home: const SplashScreen(),
     );
   }
 }
-
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
