@@ -5,7 +5,8 @@
     <application
         android:label="jejunongdi"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -36,6 +37,9 @@
         <meta-data
             android:name="com.naver.maps.map.CLIENT_ID"
             android:value="dbf70fdp3p" />
+        <meta-data
+            android:name="com.kakao.sdk.AppKey"
+            android:value="752d47c1d500b05f00d22e33448215a9"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
