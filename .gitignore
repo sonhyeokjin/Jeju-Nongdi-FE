@@ -1,15 +1,351 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+
+# Dart/Flutter specific
+.dart_tool/
+.packages
+.metadata
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+lib/generated_plugin_registrant.dart
+
+# Flutter build outputs
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
+**/windows/flutter/generated_plugins.cmake
+**/linux/flutter/generated_plugin_registrant.cc
+**/linux/flutter/generated_plugin_registrant.h
+**/linux/flutter/generated_plugins.cmake
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Flutter web
+web/manifest.json
+
+# Flutter test coverage
+coverage/
+test/.test_coverage.dart
+lcov.info
+
+# Flutter debugging
+app.*.symbols
+app.*.map.json
+
+# ============================================================================
+# ANDROID & KOTLIN
+# ============================================================================
+
+# Android build files
+**/android/.gradle/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/build/
+**/android/captures/
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/**/GeneratedPluginRegistrant.kt
+
+# Gradle wrapper
+**/android/gradlew
+**/android/gradlew.bat
+**/android/gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin compiled files
+*.class
+*.dex
+*.ap_
+
+# Android package files
+*.apk
+*.aab
+*.aar
+
+# Keystore files (NEVER commit these!)
+*.jks
+*.keystore
+**/android/key.properties
+**/android/app/keystore.properties
+
+# ProGuard/R8
+**/android/app/proguard-rules.pro
+**/android/proguard/
+
+# Local configuration
 local.properties
+
+# ============================================================================
+# iOS
+# ============================================================================
+
+# iOS build files
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*.xcuserstate
+**/ios/**/*.xcscmblueprint
+**/ios/**/*.xccheckout
+**/ios/**/*.xcworkspace/xcuserdata/
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata/
+**/ios/.generated/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# CocoaPods
+**/ios/Pods/
+**/ios/Podfile.lock
+
+# iOS certificates and provisioning profiles
+**/ios/**/*.cer
+**/ios/**/*.p12
+**/ios/**/*.mobileprovision
+
+# ============================================================================
+# DEVELOPMENT ENVIRONMENTS & IDEs
+# ============================================================================
+
+# IntelliJ IDEA / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries/
+.idea/libraries/
+.idea/caches/
+.idea/modules.xml
+.idea/misc.xml
+.idea/jarRepositories.xml
+.idea/navEditor.xml
+.idea/compiler.xml
+.idea/copyright/
+.idea/deploymentTargetDropDown.xml
+.idea/inspectionProfiles/
+.idea/sonarlint/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Xcode
+**/ios/**/*.xcworkspace
+**/ios/**/*.xcuserstate
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# ============================================================================
+# FIREBASE & API CONFIGURATION
+# ============================================================================
+
+# Firebase config files (SENSITIVE)
+**/ios/**/GoogleService-Info.plist
+**/android/**/google-services.json
+firebase_options.dart
+lib/firebase_options.dart
+
+# API keys and secrets (SENSITIVE)
+lib/config/api_keys.dart
+lib/config/secrets.dart
+lib/config/app_config.dart
+lib/constants/api_constants.dart
+assets/config/
+.env
+.env.*
+!.env.example
+
+# ============================================================================
+# LOGS & TEMPORARY FILES
+# ============================================================================
+
+# Log files
+*.log
+logs/
+**/logs/
+flutter_*.log
+dart_*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+
+# ============================================================================
+# OPERATING SYSTEM FILES
+# ============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon?
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# BUILD & DISTRIBUTION
+# ============================================================================
+
+# Build directories
+build/
+dist/
+out/
+target/
+bin/
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.rar
+*.7z
+
+# Package files
+*.jar
+*.war
+*.nar
+*.ear
+
+# ============================================================================
+# DEPENDENCIES & PACKAGE MANAGERS
+# ============================================================================
+
+# Node.js (for web development)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.pnpm-debug.log*
+
+# Pub dependencies
+pubspec.lock
+.packages
+
+# Gradle
+.gradle/
+gradle-app.setting
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ============================================================================
+# TESTING & ANALYSIS
+# ============================================================================
+
+# Test results
+test-results/
+test-reports/
+.nyc_output
+coverage.xml
+*.cover
+*.py,cover
+.coverage
+.coverage.*
+
+# SonarQube
+.sonar/
+.sonarqube/
+
+# Lint results
+lint-results.xml
+lint-results.html
+
+# ============================================================================
+# DOCUMENTATION & TOOLS
+# ============================================================================
+
+# Generated documentation
+doc/api/
+docs/_build/
+
+# Tool configurations
+.flutter-devtools/
+.dart_fvm/
+.fvm/
+
+# ============================================================================
+# CUSTOM PROJECT FILES (ADD YOUR SPECIFIC IGNORES HERE)
+# ============================================================================
+
+# Add any project-specific files or directories here
+# Example:
+# assets/private/
+# lib/custom_secrets.dart
+
+# ============================================================================
+# IMPORTANT EXCEPTIONS (Files to INCLUDE despite above rules)
+# ============================================================================
+
+# Keep these files even if they match patterns above
+!.gitkeep
+!README.md
+!CHANGELOG.md
+!pubspec.yaml
+!analysis_options.yaml
+!.env.example

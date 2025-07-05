@@ -1,10 +1,17 @@
-// lib/features/home/home_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  KakaoMapController? mapController;
+  bool isMapReady = false;
+  String mapError = '';
 
   @override
   Widget build(BuildContext context) {
@@ -12,13 +19,10 @@ class HomeScreen extends StatelessWidget {
     const Color buttonPointColor = Color(0xFF006400);
 
     return Scaffold(
-      // [변경] 기존 AppBar는 삭제하고, body에서 Stack으로 직접 UI를 쌓습니다.
       body: Stack(
         children: [
           // 지도 위젯이 가장 아래에 깔립니다.
-          KakaoMap(
-            center: LatLng(33.4996, 126.5312),
-          ),
+          _buildMapWidget(),
 
           // [변경] 지도 위에 떠 있는 플로팅 UI 요소들
           _buildFloatingUi(context),
@@ -46,8 +50,119 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  // 지도 위젯 빌드 (에러 처리 포함)
+  Widget _buildMapWidget() {
+    if (mapError.isNotEmpty) {
+      // 지도 로드 실패 시 대체 화면
+      return Container(
+        color: Colors.green[50],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.map_outlined,
+                size: 64,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '🗺️ 제주 지도',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '지도를 불러오는 중...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              if (mapError.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    '오류: $mapError',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    try {
+      return KakaoMap(
+        center: LatLng(33.4996, 126.5312), // 제주시 중심
+        maxLevel: 10,
+        onMapCreated: (KakaoMapController controller) {
+          setState(() {
+            mapController = controller;
+            isMapReady = true;
+          });
+          print('✅ 카카오맵 생성 완료');
+        },
+        onMapTap: (LatLng position) {
+          print('🗺️ 지도 탭: ${position.latitude}, ${position.longitude}');
+        },
+        // 추가 설정들
+      );
+    } catch (e) {
+      // 카카오맵 생성 실패 시
+      setState(() {
+        mapError = e.toString();
+      });
+      return Container(
+        color: Colors.green[50],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '지도 로드 실패',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  e.toString(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
   // [신규] 플로팅 UI를 만드는 별도의 위젯
-  // 플로팅 UI를 만드는 별도의 위젯
   Widget _buildFloatingUi(BuildContext context) {
     return SafeArea(
       child: Padding(
@@ -86,12 +201,18 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   // IconButton은 자체적인 크기가 있으므로, 아이콘 크기를 조절합니다.
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // 현재 위치로 이동 (구현 예정)
+                      print('📍 현재 위치 버튼 클릭');
+                    },
                     icon: const Icon(Icons.my_location, size: 26),
                   ),
                   Container(height: 20, width: 1, color: Colors.grey[300]),
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // 알림 (구현 예정)
+                      print('🔔 알림 버튼 클릭');
+                    },
                     icon: const Icon(Icons.notifications_none_outlined, size: 26),
                   ),
                 ],
@@ -102,6 +223,7 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+
   // 바텀 시트 UI를 만드는 별도의 메소드
   Widget _buildBottomSheet(BuildContext context, Color buttonColor) {
     return Container(
@@ -132,11 +254,13 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                print('🍊 일자리 찾기 버튼 클릭');
+              },
               icon: const Text('🍊', style: TextStyle(fontSize: 24)),
               label: const Text('일자리 찾기'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFF2711C),
+                backgroundColor: const Color(0xFFF2711C),
                 foregroundColor: Colors.white,
                 textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -145,7 +269,9 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                print('🚜 일손 구하기 버튼 클릭');
+              },
               icon: const Text('🚜', style: TextStyle(fontSize: 24)),
               label: const Text('일손 구하기'),
               style: ElevatedButton.styleFrom(

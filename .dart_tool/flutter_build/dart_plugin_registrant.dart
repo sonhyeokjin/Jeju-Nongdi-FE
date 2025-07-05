@@ -6,11 +6,20 @@
 // @dart = 3.8
 
 import 'dart:io'; // flutter_ignore: dart_io_import.
-import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:path_provider_android/path_provider_android.dart';
+import 'package:shared_preferences_android/shared_preferences_android.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:google_maps_flutter_ios/google_maps_flutter_ios.dart';
+import 'package:path_provider_foundation/path_provider_foundation.dart';
+import 'package:shared_preferences_foundation/shared_preferences_foundation.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:path_provider_linux/path_provider_linux.dart';
+import 'package:shared_preferences_linux/shared_preferences_linux.dart';
+import 'package:path_provider_foundation/path_provider_foundation.dart';
+import 'package:shared_preferences_foundation/shared_preferences_foundation.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:flutter_secure_storage_windows/flutter_secure_storage_windows.dart';
+import 'package:path_provider_windows/path_provider_windows.dart';
+import 'package:shared_preferences_windows/shared_preferences_windows.dart';
 
 @pragma('vm:entry-point')
 class _PluginRegistrant {
@@ -19,10 +28,19 @@ class _PluginRegistrant {
   static void register() {
     if (Platform.isAndroid) {
       try {
-        GoogleMapsFlutterAndroid.registerWith();
+        PathProviderAndroid.registerWith();
       } catch (err) {
         print(
-          '`google_maps_flutter_android` threw an error: $err. '
+          '`path_provider_android` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        SharedPreferencesAndroid.registerWith();
+      } catch (err) {
+        print(
+          '`shared_preferences_android` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
@@ -38,10 +56,19 @@ class _PluginRegistrant {
 
     } else if (Platform.isIOS) {
       try {
-        GoogleMapsFlutterIOS.registerWith();
+        PathProviderFoundation.registerWith();
       } catch (err) {
         print(
-          '`google_maps_flutter_ios` threw an error: $err. '
+          '`path_provider_foundation` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        SharedPreferencesFoundation.registerWith();
+      } catch (err) {
+        print(
+          '`shared_preferences_foundation` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
@@ -56,7 +83,43 @@ class _PluginRegistrant {
       }
 
     } else if (Platform.isLinux) {
+      try {
+        PathProviderLinux.registerWith();
+      } catch (err) {
+        print(
+          '`path_provider_linux` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        SharedPreferencesLinux.registerWith();
+      } catch (err) {
+        print(
+          '`shared_preferences_linux` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
     } else if (Platform.isMacOS) {
+      try {
+        PathProviderFoundation.registerWith();
+      } catch (err) {
+        print(
+          '`path_provider_foundation` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        SharedPreferencesFoundation.registerWith();
+      } catch (err) {
+        print(
+          '`shared_preferences_foundation` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
       try {
         WebKitWebViewPlatform.registerWith();
       } catch (err) {
@@ -67,6 +130,33 @@ class _PluginRegistrant {
       }
 
     } else if (Platform.isWindows) {
+      try {
+        FlutterSecureStorageWindows.registerWith();
+      } catch (err) {
+        print(
+          '`flutter_secure_storage_windows` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        PathProviderWindows.registerWith();
+      } catch (err) {
+        print(
+          '`path_provider_windows` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        SharedPreferencesWindows.registerWith();
+      } catch (err) {
+        print(
+          '`shared_preferences_windows` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
     }
   }
 }
