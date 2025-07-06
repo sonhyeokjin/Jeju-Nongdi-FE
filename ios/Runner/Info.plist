@@ -45,13 +45,68 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- 네트워크 보안 설정 (App Transport Security) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- 개발 단계에서는 HTTP 허용 (프로덕션에서는 제거 권장) -->
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		
+		<!-- 특정 도메인별 설정 -->
+		<key>NSExceptionDomains</key>
+		<dict>
+			<!-- 카카오맵 도메인 -->
+			<key>dapi.kakao.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+			<key>t1.daumcdn.net</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+			<key>map2.daumcdn.net</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+			<!-- 로컬 개발 서버 -->
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	
+	<!-- 네이버맵 설정 -->
 	<key>NMFClientId</key>
 	<string>xtb8rryz7x</string>
-    <key>KAKAO_APP_KEY</key>
-    <string>752d47c1d500b05f00d22e33448215a9</string>
-    <key>LSApplicationQueriesSchemes</key>
-    <array>
-        <string>kakaomap-api</string>
-    </array>
+
+	<!-- 카카오맵 설정 -->
+	<key>KAKAO_APP_KEY</key>
+	<string>752d47c1d500b05f00d22e33448215a9</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaomap-api</string>
+	</array>
+
+	<!-- 위치 권한 설정 -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>주변 농장과 일자리를 찾기 위해 위치 정보가 필요합니다.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>주변 농장과 일자리를 찾기 위해 위치 정보가 필요합니다.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>주변 농장과 일자리를 찾기 위해 위치 정보가 필요합니다.</string>
 </dict>
 </plist>
