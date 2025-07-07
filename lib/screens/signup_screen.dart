@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:jejunongdi/core/api/auth_api.dart';
 import 'package:jejunongdi/core/models/auth_models.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -18,12 +17,9 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
-  late AuthApi _authApi;
-
   @override
   void initState() {
     super.initState();
-    _authApi = AuthApi(Dio());
   }
 
   @override
@@ -36,40 +32,40 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  Future<void> _signup() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final signupRequest = SignupRequest(
-          email: _emailController.text,
-          password: _passwordController.text,
-          name: _nameController.text,
-          nickname: _nicknameController.text,
-          phone: _phoneController.text,
-        );
-        final response = await _authApi.signup(signupRequest);
-        // 회원가입 성공
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('회원가입 성공: ${response.accessToken}')),
-        );
-        Navigator.of(context).pop(); // 로그인 화면으로 돌아가기
-      } on DioException catch (e) {
-        // 회원가입 실패
-        String errorMessage = '회원가입 실패';
-        if (e.response != null && e.response!.data != null) {
-          errorMessage = '회원가입 실패: ${e.response!.data['message'] ?? e.response!.statusCode}';
-        } else {
-          errorMessage = '회원가입 실패: ${e.message}';
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('예상치 못한 오류 발생: $e')),
-        );
-      }
-    }
-  }
+  // Future<void> _signup() async {
+  //   if (_formKey.currentState!.validate()) {
+  //     try {
+  //       final signupRequest = SignupRequest(
+  //         email: _emailController.text,
+  //         password: _passwordController.text,
+  //         name: _nameController.text,
+  //         nickname: _nicknameController.text,
+  //         phone: _phoneController.text,
+  //       );
+  //       final response = await _authApi.signup(signupRequest);
+  //       // 회원가입 성공
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('회원가입 성공: ${response.accessToken}')),
+  //       );
+  //       Navigator.of(context).pop(); // 로그인 화면으로 돌아가기
+  //     } on DioException catch (e) {
+  //       // 회원가입 실패
+  //       String errorMessage = '회원가입 실패';
+  //       if (e.response != null && e.response!.data != null) {
+  //         errorMessage = '회원가입 실패: ${e.response!.data['message'] ?? e.response!.statusCode}';
+  //       } else {
+  //         errorMessage = '회원가입 실패: ${e.message}';
+  //       }
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text(errorMessage)),
+  //       );
+  //     } catch (e) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('예상치 못한 오류 발생: $e')),
+  //       );
+  //     }
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -143,10 +139,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _signup,
-                child: const Text('회원가입'),
-              ),
+              // ElevatedButton(
+              //   onPressed: _signup,
+              //   child: const Text('회원가입'),
+              // ),
             ],
           ),
         ),

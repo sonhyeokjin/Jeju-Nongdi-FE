@@ -130,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             padding: const EdgeInsets.all(24.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: const [
+                              children: [
                                 ElevatedButton(
                                   onPressed: _showJobSearch,
                                   child: Text('일자리 찾기'),
@@ -144,8 +144,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               },
