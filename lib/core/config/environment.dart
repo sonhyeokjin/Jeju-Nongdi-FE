@@ -38,7 +38,7 @@ class EnvironmentConfig {
     }
   }
   
-  // Firebase Config (if needed)
+  // Firebase Config
   static String get firebaseProjectId {
     switch (_current) {
       case Environment.development:
