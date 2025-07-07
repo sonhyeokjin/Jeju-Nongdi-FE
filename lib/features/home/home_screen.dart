@@ -16,6 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String mapError = '';
   int markerCount = 0;
   bool? internetConnected;
+  double _sheetExtent = 0.3; // DraggableScrollableSheet의 초기 높이와 동일하게 설정
 
   // 제주시 중심 좌표
   static final LatLng jejuCenter = LatLng(33.4996, 126.5312);
@@ -68,101 +69,130 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // 메인 지도 위젯
-          _buildKakaoMap(),
-          
-          // 지도 위에 떠 있는 플로팅 UI 요소들
-          _buildFloatingUi(context),
-        ],
+      body: NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          setState(() {
+            _sheetExtent = notification.extent;
+          });
+          return false; // 알림을 계속 전달
+        },
+        child: Stack(
+          children: [
+            // 1. Map (takes full background)
+            Positioned.fill(
+              child: IgnorePointer( // 시트가 확장될 때만 지도를 무시
+                ignoring: _sheetExtent > 0.15, // 시트가 최소 높이 이상으로 올라왔을 때 지도를 무시
+                child: _buildKakaoMap(),
+              ),
+            ),
+
+            // 2. Top floating UI (app bar like)
+            if (isMapReady) _buildFloatingUi(context),
+
+            // 3. Draggable bottom sheet
+            DraggableScrollableSheet(
+              initialChildSize: 0.3, // 초기 높이 (화면 높이의 30%)
+              minChildSize: 0.1,    // 최소 높이 (아래로 드래그 시)
+              maxChildSize: 0.8,    // 최대 높이 (위로 드래그 시)
+              expand: true,
+              builder: (BuildContext context, ScrollController scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, -2),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Drag handle
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 10), // 드래그 핸들 상하 마진 추가
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Expanded( // Expanded를 추가하여 남은 공간을 채우도록 함
+                        child: SingleChildScrollView( // SingleChildScrollView 다시 추가 및 scrollController 연결
+                          controller: scrollController,
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: const [
+                                ElevatedButton(
+                                  onPressed: _showJobSearch,
+                                  child: Text('일자리 찾기'),
+                                ),
+                                SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: _showWorkerRecruit,
+                                  child: Text('일손 구하기'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
-      // 바텀 시트
-      bottomSheet: _buildBottomSheet(context),
     );
   }
 
   // 카카오 지도 위젯 빌드
   Widget _buildKakaoMap() {
-    return SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: KakaoMap(
-        onMapCreated: (KakaoMapController controller) {
-          print('🗺️ 카카오맵 onMapCreated 콜백 호출됨');
-          setState(() {
-            mapController = controller;
-            isMapReady = true;
-            mapError = '';
-          });
-          print('✅ 카카오맵 생성 완료 - 상태 업데이트됨');
+    if (internetConnected == false) {
+      return const Center(
+        child: Text('❌ 인터넷에 연결되지 않았습니다.\n연결을 확인하고 앱을 다시 시작해주세요.'),
+      );
+    }
 
-          // 지도가 생성되면 샘플 마커들 추가
-          Future.delayed(const Duration(milliseconds: 500), () {
-            _addSampleMarkers();
-          });
-        },
-        onMapTap: (LatLng position) {
-          print('🗺️ 지도 탭: ${position.latitude}, ${position.longitude}');
-        },
-        center: jejuCenter
-      ),
+    if (mapError.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('❌ 지도 로딩 실패: $mapError'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _retryMapInitialization,
+              child: const Text('재시도'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return KakaoMap(
+      onMapCreated: (KakaoMapController controller) {
+        if (!mounted) return;
+        print('🗺️ 카카오맵 onMapCreated 콜백 호출됨');
+        setState(() {
+          mapController = controller;
+          isMapReady = true;
+        });
+        print('✅ 카카오맵 생성 완료');
+        _addSampleMarkers();
+      },
+      center: jejuCenter,
     );
-  }
-
-  // 샘플 마커들 추가
-  void _addSampleMarkers() {
-    if (mapController == null) {
-      print('❌ mapController가 null임');
-      return;
-    }
-
-    print('📍 마커 추가 시작');
-
-    try {
-      // 제주도 주요 농장 위치에 마커 추가
-      final markers = [
-        // 제주시 감귤농장
-        Marker(
-          markerId: 'farm1',
-          latLng: LatLng(33.5012, 126.5297),
-        ),
-        // 서귀포 브로콜리 농장
-        Marker(
-          markerId: 'farm2',
-          latLng: LatLng(33.2541, 126.5596),
-        ),
-        // 애월 고구마 농장
-        Marker(
-          markerId: 'farm3',
-          latLng: LatLng(33.4619, 126.3309),
-        ),
-        // 성산 양파 농장
-        Marker(
-          markerId: 'farm4',
-          latLng: LatLng(33.4593, 126.9419),
-        ),
-        // 한림 배추 농장
-        Marker(
-          markerId: 'farm5',
-          latLng: LatLng(33.4141, 126.2692),
-        ),
-      ];
-
-      // 마커들을 지도에 추가
-      mapController!.addMarker(markers: markers);
-      
-      setState(() {
-        markerCount = markers.length;
-      });
-      
-      print('✅ ${markers.length}개 농장 마커 추가 완료');
-    } catch (e) {
-      print('❌ 마커 추가 실패: $e');
-      setState(() {
-        mapError = '마커 추가 실패: $e';
-      });
-    }
   }
 
   // 플로팅 UI를 만드는 별도의 위젯
@@ -245,6 +275,61 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 샘플 마커들 추가
+  void _addSampleMarkers() {
+    if (mapController == null) {
+      print('❌ mapController가 null임');
+      return;
+    }
+
+    print('📍 마커 추가 시작');
+
+    try {
+      // 제주도 주요 농장 위치에 마커 추가
+      final markers = [
+        // 제주시 감귤농장
+        Marker(
+          markerId: 'farm1',
+          latLng: LatLng(33.5012, 126.5297),
+        ),
+        // 서귀포 브로콜리 농장
+        Marker(
+          markerId: 'farm2',
+          latLng: LatLng(33.2541, 126.5596),
+        ),
+        // 애월 고구마 농장
+        Marker(
+          markerId: 'farm3',
+          latLng: LatLng(33.4619, 126.3309),
+        ),
+        // 성산 양파 농장
+        Marker(
+          markerId: 'farm4',
+          latLng: LatLng(33.4593, 126.9419),
+        ),
+        // 한림 배추 농장
+        Marker(
+          markerId: 'farm5',
+          latLng: LatLng(33.4141, 126.2692),
+        ),
+      ];
+
+      // 마커들을 지도에 추가
+      mapController!.addMarker(markers: markers);
+      
+      setState(() {
+        markerCount = markers.length;
+      });
+      
+      print('✅ ${markers.length}개 농장 마커 추가 완료');
+    } catch (e) {
+      print('❌ 마커 추가 실패: $e');
+      setState(() {
+        mapError = '마커 추가 실패: $e';
+      });
+    }
+  }
+
   // 지도 디버그 정보 표시
   void _debugMapStatus() {
     showDialog(
@@ -324,153 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
     print('🔄 지도 초기화 재시도');
   }
 
-  // 바텀 시트 UI
-  Widget _buildBottomSheet(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, -2),
-          )
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              '어떤 일자리를 찾으시나요?',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () {
-                _showJobSearch();
-              },
-              icon: const Text('🍊', style: TextStyle(fontSize: 24)),
-              label: const Text(
-                '일자리 찾기',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF2711C),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () {
-                _showWorkerRecruit();
-              },
-              icon: const Text('🚜', style: TextStyle(fontSize: 24)),
-              label: const Text(
-                '일손 구하기',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF333333),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                side: const BorderSide(color: Color(0xFFDDDDDD)),
-                elevation: 1,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 지도 상태 표시 (개선된 디버깅용)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _getStatusColor(),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _getStatusBorderColor(),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _getStatusIcon(),
-                    size: 16,
-                    color: _getStatusIconColor(),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _getStatusMessage(),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _getStatusTextColor(),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            if (mapError.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error, size: 16, color: Colors.red[600]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '❌ 지도 오류: $mapError',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red[700],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
+  
 
   // 상태별 색상 및 메시지 헬퍼 메서드들
   Color _getStatusColor() {

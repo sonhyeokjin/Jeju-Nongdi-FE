@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lottie/lottie.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/store.dart' as redux_store;
 import 'package:jejunongdi/screens/main_navigation.dart';
 import 'package:jejunongdi/screens/login_screen.dart';
+import 'package:jejunongdi/screens/signup_screen.dart'; // SignupScreen import 추가
 import 'package:jejunongdi/core/config/environment.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,12 +20,8 @@ Future<void> main() async {
   print('✅ Redux Store 초기화 완료');
 
   // 카카오맵 API 키 초기화
-  try {
-    AuthRepository.initialize(appKey: EnvironmentConfig.kakaoMapApiKey);
-    print('✅ 카카오맵 API 키 초기화 완료: ${EnvironmentConfig.kakaoMapApiKey}');
-  } catch (e) {
-    print('❌ 카카오맵 API 키 초기화 실패: $e');
-  }
+  AuthRepository.initialize(appKey: EnvironmentConfig.kakaoMapApiKey);
+  print('✅ 카카오맵 API 키 초기화 완료: ');
 
   runApp(
     const ProviderScope(
@@ -61,6 +59,7 @@ class MyApp extends StatelessWidget {
           '/': (context) => const SplashScreen(),
           '/main': (context) => const MainNavigation(),
           '/login': (context) => const LoginScreen(),
+          '/signup': (context) => const SignupScreen(), // 회원가입 라우트 추가
         },
       ),
     );
@@ -213,9 +212,11 @@ class _SplashScreenState extends State<SplashScreen> {
                 const Spacer(flex: 3),
                 
                 // 로딩 인디케이터
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  strokeWidth: 3,
+                Lottie.asset(
+                  'lib/assets/lottie/loading_animation.json',
+                  width: 150,
+                  height: 220,
+                  fit: BoxFit.fill,
                 ),
                 
                 const SizedBox(height: 20),

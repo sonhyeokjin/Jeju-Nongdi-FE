@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
+import 'package:lottie/lottie.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/user/user_actions.dart';
 import 'package:jejunongdi/redux/user/user_model.dart';
@@ -54,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         children: [
                           const Text(
-                            'my농디🍊',
+                            'MY농디🍊',
                             style: TextStyle(
                               fontSize: 48,
                               fontWeight: FontWeight.bold,
@@ -189,8 +190,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           elevation: 0,
                         ),
                         child: userState.isLoading
-                            ? const CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ? Lottie.asset(
+                                'lib/assets/lottie/loading_animation.json',
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.fill,
                               )
                             : const Text(
                                 '로그인',
@@ -237,11 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         GestureDetector(
                           onTap: () {
-                            // TODO: 회원가입 화면 구현 후 활성화
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('회원가입 기능은 준비 중입니다.')),
-                            );
-                            // Navigator.of(context).pushNamed('/signup');
+                            Navigator.of(context).pushNamed('/signup');
                           },
                           child: const Text(
                             '회원가입',

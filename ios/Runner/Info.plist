@@ -45,6 +45,8 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 	
 	<!-- 네트워크 보안 설정 (App Transport Security) -->
 	<key>NSAppTransportSecurity</key>
@@ -89,10 +91,6 @@
 		</dict>
 	</dict>
 	
-	<!-- 네이버맵 설정 -->
-	<key>NMFClientId</key>
-	<string>xtb8rryz7x</string>
-
 	<!-- 카카오맵 설정 -->
 	<key>KAKAO_APP_KEY</key>
 	<string>752d47c1d500b05f00d22e33448215a9</string>
