@@ -5,6 +5,8 @@ import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/user/user_actions.dart';
 import 'package:jejunongdi/redux/user/user_model.dart';
 import 'package:jejunongdi/redux/user/user_state.dart';
+import 'package:jejunongdi/core/services/auth_service.dart';
+import 'package:jejunongdi/core/network/api_exceptions.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -276,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // 로딩 시작
       store.dispatch(SetUserLoadingAction(true));
       
-      // 실제 로그인 로직 (임시로 가짜 성공 처리)
+      // 실제 로그인 로직 수행
       _performLogin();
     }
   }
@@ -285,35 +287,39 @@ class _LoginScreenState extends State<LoginScreen> {
     final store = StoreProvider.of<AppState>(context);
     
     try {
-      // 여기서 실제 API 호출을 수행합니다
-      // 임시로 2초 대기 후 성공 처리
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // 가짜 사용자 데이터 생성
-      final user = User(
-        id: '1',
-        email: _emailController.text,
-        name: '홍길동',
-        role: UserRole.worker,
-        isActive: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+      // 실제 AuthService를 사용한 로그인 처리
+      final authService = AuthService.instance;
+      final result = await authService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
       
-      // 로그인 성공 액션 디스패치
-      store.dispatch(LoginSuccessAction(
-        user: user,
-        accessToken: 'fake_access_token',
-        refreshToken: 'fake_refresh_token',
-      ));
-      
-      // 로그인 성공 시 네비게이션
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/main');
+      if (result.isSuccess) {
+        // 로그인 성공 시
+        final authResponse = result.data!;
+        
+        // 로그인 성공 액션 디스패치
+        store.dispatch(LoginSuccessAction(
+          user: authResponse.user,
+          accessToken: authResponse.accessToken,
+          refreshToken: authResponse.refreshToken,
+        ));
+        
+        // 로그인 성공 시 네비게이션
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/main');
+        }
+      } else {
+        // 로그인 실패 시
+        final errorMessage = result.error?.message ?? '로그인에 실패했습니다.';
+        store.dispatch(SetUserErrorAction(errorMessage));
       }
     } catch (e) {
-      // 로그인 실패 처리
-      store.dispatch(SetUserErrorAction('이메일 또는 비밀번호가 올바르지 않습니다.'));
+      // 예외 발생 시
+      store.dispatch(SetUserErrorAction('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'));
+    } finally {
+      // 로딩 상태 해제
+      store.dispatch(SetUserLoadingAction(false));
     }
   }
 }

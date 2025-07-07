@@ -4,7 +4,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jejunongdi/core/network/api_client.dart';
 import 'package:jejunongdi/core/network/api_exceptions.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
-import 'package:jejunongdi/redux/user/user_model.dart';
+import 'package:jejunongdi/redux/user/user_model.dart' as user_model;
+import 'package:jejunongdi/core/models/auth_models.dart' as auth_models;
 
 class AuthService {
   static AuthService? _instance;
@@ -19,7 +20,7 @@ class AuthService {
   AuthService._internal();
   
   // 로그인
-  Future<ApiResult<AuthResponse>> login({
+  Future<ApiResult<user_model.AuthResponse>> login({
     required String email,
     required String password,
   }) async {
@@ -35,7 +36,42 @@ class AuthService {
       );
       
       if (response.data != null) {
-        final authResponse = AuthResponse.fromJson(response.data!);
+        // 서버 응답을 먼저 파싱
+        final serverResponse = auth_models.ServerAuthResponse.fromJson(response.data!);
+        
+        // UserRole 변환
+        user_model.UserRole userRole;
+        switch (serverResponse.role.toUpperCase()) {
+          case 'USER':
+          case 'WORKER':
+            userRole = user_model.UserRole.worker;
+            break;
+          case 'ADMIN':
+          case 'MASTER':
+            userRole = user_model.UserRole.master;
+            break;
+          default:
+            userRole = user_model.UserRole.worker;
+        }
+        
+        // User 모델 생성
+        final user = user_model.User(
+          id: serverResponse.email, // 서버에서 id를 제공하지 않으므로 email을 사용
+          email: serverResponse.email,
+          name: serverResponse.name,
+          role: userRole,
+          isActive: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        
+        // AuthResponse 생성
+        final authResponse = user_model.AuthResponse(
+          user: user,
+          accessToken: serverResponse.token,
+          refreshToken: null, // 서버에서 refresh token을 제공하지 않음
+          expiresIn: 86400, // 24시간 기본값
+        );
         
         // 토큰 저장
         await _saveTokens(
@@ -62,12 +98,12 @@ class AuthService {
   }
   
   // 회원가입
-  Future<ApiResult<AuthResponse>> register({
+  Future<ApiResult<user_model.AuthResponse>> register({
     required String email,
     required String password,
     required String name,
     String? phoneNumber,
-    required UserRole role,
+    required user_model.UserRole role,
   }) async {
     try {
       Logger.info('회원가입 시도: $email');
@@ -84,7 +120,7 @@ class AuthService {
       );
       
       if (response.data != null) {
-        final authResponse = AuthResponse.fromJson(response.data!);
+        final authResponse = user_model.AuthResponse.fromJson(response.data!);
         
         // 토큰 저장
         await _saveTokens(
@@ -135,7 +171,7 @@ class AuthService {
   }
   
   // 토큰 갱신
-  Future<ApiResult<AuthResponse>> refreshToken() async {
+  Future<ApiResult<user_model.AuthResponse>> refreshToken() async {
     try {
       Logger.info('토큰 갱신 시도');
       
@@ -152,7 +188,7 @@ class AuthService {
       );
       
       if (response.data != null) {
-        final authResponse = AuthResponse.fromJson(response.data!);
+        final authResponse = user_model.AuthResponse.fromJson(response.data!);
         
         // 새 토큰 저장
         await _saveTokens(
@@ -183,14 +219,14 @@ class AuthService {
   }
   
   // 현재 사용자 정보 조회
-  Future<ApiResult<User>> getCurrentUser() async {
+  Future<ApiResult<user_model.User>> getCurrentUser() async {
     try {
       Logger.info('현재 사용자 정보 조회');
       
       final response = await _apiClient.get<Map<String, dynamic>>('/auth/me');
       
       if (response.data != null) {
-        final user = User.fromJson(response.data!);
+        final user = user_model.User.fromJson(response.data!);
         
         // 로컬에 사용자 정보 업데이트
         await _saveUserInfo(user);
@@ -294,14 +330,14 @@ class AuthService {
   }
   
   // 저장된 사용자 정보 조회
-  Future<User?> getSavedUserInfo() async {
+  Future<user_model.User?> getSavedUserInfo() async {
     try {
       final userInfoJson = await _secureStorage.read(key: 'user_info');
       if (userInfoJson != null) {
         final userInfoMap = Map<String, dynamic>.from(
           jsonDecode(userInfoJson)
         );
-        return User.fromJson(userInfoMap);
+        return user_model.User.fromJson(userInfoMap);
       }
       return null;
     } catch (e) {
@@ -322,7 +358,7 @@ class AuthService {
   }
   
   // 사용자 정보 저장
-  Future<void> _saveUserInfo(User user) async {
+  Future<void> _saveUserInfo(user_model.User user) async {
     final userInfoJson = jsonEncode(user.toJson());
     await _secureStorage.write(key: 'user_info', value: userInfoJson);
   }

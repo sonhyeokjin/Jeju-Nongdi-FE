@@ -38,6 +38,28 @@ class LoginRequest {
   Map<String, dynamic> toJson() => _$LoginRequestToJson(this);
 }
 
+// 서버 응답에 맞는 로그인 응답 모델
+@JsonSerializable()
+class ServerAuthResponse {
+  final String token;
+  final String email;
+  final String name;
+  final String nickname;
+  final String role; // "USER" or "ADMIN" 등의 문자열
+
+  ServerAuthResponse({
+    required this.token,
+    required this.email,
+    required this.name,
+    required this.nickname,
+    required this.role,
+  });
+
+  factory ServerAuthResponse.fromJson(Map<String, dynamic> json) =>
+      _$ServerAuthResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$ServerAuthResponseToJson(this);
+}
+
 @JsonSerializable()
 class AuthResponse {
   final String accessToken;
