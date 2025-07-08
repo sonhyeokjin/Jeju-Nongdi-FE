@@ -141,17 +141,43 @@ class SignUpRequestAction extends UserAction {
   final String email;
   final String password;
   final String name;
-  final String? phoneNumber;
-  final UserRole role;
-  
+  final String nickname;
+  final String phone;
+
   SignUpRequestAction({
     required this.email,
     required this.password,
     required this.name,
-    this.phoneNumber,
-    required this.role,
+    required this.nickname,
+    required this.phone,
   });
-  
+
   @override
-  String toString() => 'SignUpRequestAction{email: $email, name: $name, role: $role}';
+  String toString() => 'SignUpRequestAction{email: $email, name: $name}';
+}
+
+// 회원가입 성공 액션
+class SignUpSuccessAction extends UserAction {
+  final User user;
+  final String accessToken;
+  final String? refreshToken;
+
+  SignUpSuccessAction({
+    required this.user,
+    required this.accessToken,
+    this.refreshToken,
+  });
+
+  @override
+  String toString() => 'SignUpSuccessAction{user: ${user.name}, hasToken: ${accessToken.isNotEmpty}}';
+}
+
+// 회원가입 실패 액션
+class SignUpFailureAction extends UserAction {
+  final String error;
+
+  SignUpFailureAction(this.error);
+
+  @override
+  String toString() => 'SignUpFailureAction{error: $error}';
 }

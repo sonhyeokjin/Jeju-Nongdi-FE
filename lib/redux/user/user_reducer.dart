@@ -38,6 +38,25 @@ UserState userReducer(UserState state, dynamic action) {
     );
   }
   
+  if (action is SignUpSuccessAction) {
+    return state.copyWith(
+      authStatus: AuthStatus.authenticated,
+      user: action.user,
+      accessToken: action.accessToken,
+      refreshToken: action.refreshToken,
+      errorMessage: null,
+      isLoading: false,
+    );
+  }
+
+  if (action is SignUpFailureAction) {
+    return state.copyWith(
+      authStatus: AuthStatus.error,
+      errorMessage: action.error,
+      isLoading: false,
+    );
+  }
+
   if (action is LogoutAction) {
     return const UserState.initial().copyWith(
       authStatus: AuthStatus.unauthenticated,

@@ -8,6 +8,7 @@ class User {
   final String id;
   final String email;
   final String name;
+  final String nickname;
   final String? profileImageUrl;
   final String? phoneNumber;
   final DateTime? birthDate;
@@ -20,6 +21,7 @@ class User {
     required this.id,
     required this.email,
     required this.name,
+    required this.nickname,
     this.profileImageUrl,
     this.phoneNumber,
     this.birthDate,
@@ -38,6 +40,7 @@ class User {
     String? id,
     String? email,
     String? name,
+    String? nickname,
     String? profileImageUrl,
     String? phoneNumber,
     DateTime? birthDate,
@@ -50,6 +53,7 @@ class User {
       id: id ?? this.id,
       email: email ?? this.email,
       name: name ?? this.name,
+      nickname: nickname ?? this.nickname,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       birthDate: birthDate ?? this.birthDate,
@@ -76,6 +80,7 @@ class User {
         'id: $id, '
         'email: $email, '
         'name: $name, '
+        'nickname: $nickname, '
         'role: $role'
         '}';
   }

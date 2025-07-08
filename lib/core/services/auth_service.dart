@@ -59,6 +59,7 @@ class AuthService {
           id: serverResponse.email, // 서버에서 id를 제공하지 않으므로 email을 사용
           email: serverResponse.email,
           name: serverResponse.name,
+          nickname: serverResponse.nickname,
           role: userRole,
           isActive: true,
           createdAt: DateTime.now(),
@@ -98,39 +99,63 @@ class AuthService {
   }
   
   // 회원가입
-  Future<ApiResult<user_model.AuthResponse>> register({
-    required String email,
-    required String password,
-    required String name,
-    String? phoneNumber,
-    required user_model.UserRole role,
-  }) async {
+  Future<ApiResult<user_model.AuthResponse>> register(auth_models.SignupRequest request) async {
     try {
-      Logger.info('회원가입 시도: $email');
-      
+      Logger.info('회원가입 시도: ${request.email}');
+
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '/auth/register',
-        data: {
-          'email': email,
-          'password': password,
-          'name': name,
-          'phoneNumber': phoneNumber,
-          'role': role.name,
-        },
+        '/api/auth/signup',
+        data: request.toJson(),
       );
-      
+
       if (response.data != null) {
-        final authResponse = user_model.AuthResponse.fromJson(response.data!);
-        
+        // 서버 응답을 먼저 파싱
+        final serverResponse = auth_models.ServerAuthResponse.fromJson(response.data!);
+
+        // UserRole 변환
+        user_model.UserRole userRole;
+        switch (serverResponse.role.toUpperCase()) {
+          case 'USER':
+          case 'WORKER':
+            userRole = user_model.UserRole.worker;
+            break;
+          case 'ADMIN':
+          case 'MASTER':
+            userRole = user_model.UserRole.master;
+            break;
+          default:
+            userRole = user_model.UserRole.worker;
+        }
+
+        // User 모델 생성
+        final user = user_model.User(
+          id: serverResponse.email, // 서버에서 id를 제공하지 않으므로 email을 사용
+          email: serverResponse.email,
+          name: serverResponse.name,
+          nickname: serverResponse.nickname,
+          role: userRole,
+          isActive: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        // AuthResponse 생성
+        final authResponse = user_model.AuthResponse(
+          user: user,
+          accessToken: serverResponse.token,
+          refreshToken: null, // 서버에서 refresh token을 제공하지 않음
+          expiresIn: 86400, // 24시간 기본값
+        );
+
         // 토큰 저장
         await _saveTokens(
           accessToken: authResponse.accessToken,
           refreshToken: authResponse.refreshToken,
         );
-        
+
         // 사용자 정보 저장
         await _saveUserInfo(authResponse.user);
-        
+
         Logger.info('회원가입 성공: ${authResponse.user.email}');
         return ApiResult.success(authResponse);
       } else {
