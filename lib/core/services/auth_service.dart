@@ -28,7 +28,7 @@ class AuthService {
       Logger.info('로그인 시도: $email');
       
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '/auth/login',
+        '/api/auth/login',
         data: {
           'email': email,
           'password': password,

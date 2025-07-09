@@ -24,7 +24,7 @@ void Function(Store<AppState> store, SignUpRequestAction action, NextDispatcher 
         password: action.password,
         name: action.name,
         nickname: action.nickname,
-        phone: action.phone,
+        phone: action.phone.replaceAll(RegExp(r'[^0-9]'), ''), // 하이픈 및 공백 제거
       );
 
       final result = await authService.register(signupRequest);

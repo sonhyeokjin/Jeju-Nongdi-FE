@@ -18,7 +18,7 @@ class EnvironmentConfig {
   static String get apiBaseUrl {
     switch (_current) {
       case Environment.development:
-        return 'https://jeju-nongdi-be.onrender.com/api';
+        return 'https://jeju-nongdi-be.onrender.com';
       case Environment.staging:
         return 'https://staging-api.jejunongdi.com/api';
       case Environment.production:

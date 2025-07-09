@@ -13,10 +13,18 @@ class AuthInterceptor extends Interceptor {
   
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    // 회원가입 경로를 백엔드 API에 맞게 변경
+    if (options.path == '/auth/signup') {
+      options.path = '/auth/signup';
+    }
+    
     // 인증이 필요 없는 엔드포인트들
     final publicEndpoints = [
       '/auth/login',
+      '/api/auth/login',
       '/auth/register',
+      '/auth/signup',
+      '/api/auth/signup',
       '/auth/refresh',
       '/auth/forgot-password',
     ];
