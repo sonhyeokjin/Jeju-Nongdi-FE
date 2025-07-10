@@ -19,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen>
   String _email = '';
   String _password = '';
   bool _isPasswordVisible = false;
-  bool _isLoading = false;
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -83,22 +82,10 @@ class _LoginScreenState extends State<LoginScreen>
 
   void _login() async {
     if (_formKey.currentState?.validate() ?? false) {
-      setState(() {
-        _isLoading = true;
-      });
-      
       _formKey.currentState?.save();
       StoreProvider.of<AppState>(context, listen: false).dispatch(
         LoginRequestAction(email: _email, password: _password)
       );
-      
-      // 실제 로그인 로직 완료 후 로딩 상태 해제 (임시)
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 
@@ -117,7 +104,30 @@ class _LoginScreenState extends State<LoginScreen>
     final screenHeight = MediaQuery.of(context).size.height;
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
+    return StoreConnector<AppState, AppState>(
+      converter: (store) => store.state,
+      onWillChange: (previousState, newState) {
+        // 로그인 성공 시 네비게이션
+        if (previousState?.userState.user == null && 
+            newState.userState.user != null) {
+          Navigator.pop(context);
+        }
+        
+        // 에러 메시지 표시
+        if (newState.userState.errorMessage != null && 
+            newState.userState.errorMessage!.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(newState.userState.errorMessage!),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state.userState.isLoading;
+        
+        return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
@@ -351,7 +361,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     const SizedBox(height: 36),
 
                                     // 로그인 버튼 - 고급 디자인
-                                    _buildLoginButton(),
+                                    _buildLoginButton(isLoading),
 
                                     const SizedBox(height: 24),
 
@@ -374,6 +384,8 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
       ),
+    );
+      },
     );
   }
 
@@ -469,7 +481,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildLoginButton() {
+  Widget _buildLoginButton(bool isLoading) {
     return AnimatedBuilder(
       animation: _scaleController,
       builder: (context, child) {
@@ -492,7 +504,7 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           ),
           child: ElevatedButton(
-            onPressed: _isLoading ? null : _login,
+            onPressed: isLoading ? null : _login,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
@@ -500,7 +512,7 @@ class _LoginScreenState extends State<LoginScreen>
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: _isLoading
+            child: isLoading
                 ? const SizedBox(
                     width: 24,
                     height: 24,

@@ -8,8 +8,40 @@ List<Middleware<AppState>> createUserMiddleware() {
   final authService = AuthService.instance;
 
   return [
+    TypedMiddleware<AppState, LoginRequestAction>(_createLoginMiddleware(authService)),
     TypedMiddleware<AppState, SignUpRequestAction>(_createSignUpMiddleware(authService)),
   ];
+}
+
+void Function(Store<AppState> store, LoginRequestAction action, NextDispatcher next) _createLoginMiddleware(
+  AuthService authService,
+) {
+  return (store, action, next) async {
+    next(SetUserLoadingAction(true));
+
+    try {
+      final result = await authService.login(
+        email: action.email,
+        password: action.password,
+      );
+
+      result.onSuccess((authResponse) {
+        store.dispatch(LoginSuccessAction(
+          user: authResponse.user,
+          accessToken: authResponse.accessToken,
+          refreshToken: authResponse.refreshToken,
+        ));
+      });
+
+      result.onFailure((error) {
+        store.dispatch(SetUserErrorAction(error.message));
+      });
+    } catch (e) {
+      store.dispatch(SetUserErrorAction(e.toString()));
+    }
+
+    next(SetUserLoadingAction(false));
+  };
 }
 
 void Function(Store<AppState> store, SignUpRequestAction action, NextDispatcher next) _createSignUpMiddleware(

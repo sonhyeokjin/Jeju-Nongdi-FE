@@ -30,7 +30,6 @@ class _SignupScreenState extends State<SignupScreen>
   String _phone = '';
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _isLoading = false;
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -85,10 +84,6 @@ class _SignupScreenState extends State<SignupScreen>
 
   void _signup() async {
     if (_formKey.currentState?.validate() ?? false) {
-      setState(() {
-        _isLoading = true;
-      });
-      
       _formKey.currentState?.save();
       StoreProvider.of<AppState>(context, listen: false).dispatch(SignUpRequestAction(
         email: _email,
@@ -97,14 +92,6 @@ class _SignupScreenState extends State<SignupScreen>
         name: _name,
         phone: _phone,
       ));
-      
-      // 실제 회원가입 로직 완료 후 로딩 상태 해제 (임시)
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 
@@ -127,7 +114,30 @@ class _SignupScreenState extends State<SignupScreen>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
+    return StoreConnector<AppState, AppState>(
+      converter: (store) => store.state,
+      onWillChange: (previousState, newState) {
+        // 회원가입 성공 시 네비게이션
+        if (previousState?.userState.user == null && 
+            newState.userState.user != null) {
+          Navigator.pop(context);
+        }
+        
+        // 에러 메시지 표시
+        if (newState.userState.errorMessage != null && 
+            newState.userState.errorMessage!.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(newState.userState.errorMessage!),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state.userState.isLoading;
+        
+        return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
@@ -453,7 +463,7 @@ class _SignupScreenState extends State<SignupScreen>
                                     const SizedBox(height: 36),
 
                                     // 회원가입 버튼
-                                    _buildSignupButton(),
+                                    _buildSignupButton(isLoading),
 
                                     const SizedBox(height: 24),
 
@@ -476,6 +486,8 @@ class _SignupScreenState extends State<SignupScreen>
           ),
         ),
       ),
+    );
+      },
     );
   }
 
@@ -599,7 +611,7 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  Widget _buildSignupButton() {
+  Widget _buildSignupButton(bool isLoading) {
     return AnimatedBuilder(
       animation: _staggerController,
       builder: (context, child) {
@@ -622,7 +634,7 @@ class _SignupScreenState extends State<SignupScreen>
             ],
           ),
           child: ElevatedButton(
-            onPressed: _isLoading ? null : _signup,
+            onPressed: isLoading ? null : _signup,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
@@ -630,7 +642,7 @@ class _SignupScreenState extends State<SignupScreen>
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: _isLoading
+            child: isLoading
                 ? const SizedBox(
                     width: 24,
                     height: 24,
