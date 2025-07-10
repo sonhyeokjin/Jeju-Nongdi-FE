@@ -2,6 +2,7 @@
 import 'package:redux/redux.dart';
 import 'package:redux_logging/redux_logging.dart';
 import 'package:jejunongdi/redux/app_state.dart';
+import 'package:jejunongdi/redux/user/user_middleware.dart';
 import 'package:jejunongdi/redux/user/user_reducer.dart';
 
 // Root Reducer - 앱 전체 상태 관리
@@ -27,6 +28,7 @@ Store<AppState> createStore() {
   }
   
   // 추가 미들웨어들을 여기에 추가할 수 있습니다
+  middleware.addAll(createUserMiddleware());
   // middleware.add(apiMiddleware);
   // middleware.add(storageMiddleware);
   // middleware.add(thunkMiddleware);

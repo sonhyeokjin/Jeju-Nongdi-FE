@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 모든 HTTP 트래픽 허용 (개발 단계용) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- 카카오맵 관련 도메인 -->
+        <domain includeSubdomains="true">dapi.kakao.com</domain>
+        <domain includeSubdomains="true">t1.daumcdn.net</domain>
+        <domain includeSubdomains="true">map2.daumcdn.net</domain>
+        <domain includeSubdomains="true">map.daumcdn.net</domain>
+        <domain includeSubdomains="true">apis.map.kakao.com</domain>
+        
+        <!-- 개발 서버 -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        
+        <!-- API 서버 -->
+        <domain includeSubdomains="true">api.jejunongdi.com</domain>
+        <domain includeSubdomains="true">staging-api.jejunongdi.com</domain>
+    </domain-config>
+    
+    <!-- 디버그용 - 모든 cleartext 트래픽 허용 -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>
