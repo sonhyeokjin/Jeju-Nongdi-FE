@@ -95,6 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
               minChildSize: 0.1,    // 최소 높이 (아래로 드래그 시)
               maxChildSize: 0.8,    // 최대 높이 (위로 드래그 시)
               expand: true,
+              // 중단점 설정
+              snap: true,
+              snapSizes: const [0.1,0.3, 0.8], // 스냅 포인트 설정
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
                   decoration: const BoxDecoration(
