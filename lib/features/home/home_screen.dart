@@ -124,21 +124,109 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Expanded( // Expanded를 추가하여 남은 공간을 채우도록 함
-                        child: SingleChildScrollView( // SingleChildScrollView 다시 추가 및 scrollController 연결
+                        child: SingleChildScrollView(
                           controller: scrollController,
                           child: Padding(
                             padding: const EdgeInsets.all(24.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                ElevatedButton(
-                                  onPressed: _showJobSearch,
-                                  child: Text('일자리 찾기'),
+                                // 일자리 찾기 버튼
+                                Container(
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFFF2711C),
+                                        Color(0xFFFF8C42),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFFF2711C).withOpacity(0.3),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: _showJobSearch,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const SizedBox(width: 12),
+                                        const Text(
+                                          '일자리 찾기 🔍',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                                SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: _showWorkerRecruit,
-                                  child: Text('일손 구하기'),
+                                
+                                const SizedBox(height: 16),
+                                
+                                // 일손 구하기 버튼
+                                Container(
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.white,
+                                        Colors.grey[50]!,
+                                      ],
+                                    ),
+                                    border: Border.all(
+                                      color: const Color(0xFFF2711C).withOpacity(0.3),
+                                      width: 2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: _showWorkerRecruit,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const SizedBox(width: 12),
+                                        const Text(
+                                          '일손 구하기 👥',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFFF2711C),
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

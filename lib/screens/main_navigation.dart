@@ -19,6 +19,25 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  int _lastTabBeforeLogin = 3; // 로그인 전 마지막 탭 저장
+
+  void _navigateToLogin() async {
+    // 현재 탭 인덱스 저장
+    _lastTabBeforeLogin = _currentIndex;
+    
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const LoginScreen(),
+      ),
+    );
+    
+    // 로그인 화면에서 돌아왔을 때 이전 탭으로 복원
+    if (result == null) {
+      setState(() {
+        _currentIndex = _lastTabBeforeLogin;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,13 +54,24 @@ class _MainNavigationState extends State<MainNavigation> {
               // MY농디 탭: 로그인 상태에 따라 다른 화면 표시
               userState.isAuthenticated 
                   ? const MyPageScreen() 
-                  : const LoginScreen(),
+                  : Container(
+                      color: const Color(0xFFF8F9FA),
+                      child: const Center(
+                        child: Text(
+                          '로그인이 필요한 서비스입니다',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
             ],
           ),
           bottomNavigationBar: Transform.translate(
-            offset: const Offset(0.0, -20.0), // Adjusted vertical offset
-            child: Padding( // Added Padding for horizontal adjustment
-              padding: const EdgeInsets.symmetric(horizontal: 20.0), // Adjust this value for horizontal size
+            offset: const Offset(0.0, -20.0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -51,7 +81,7 @@ class _MainNavigationState extends State<MainNavigation> {
                       color: Colors.black.withOpacity(.1),
                     )
                   ],
-                  borderRadius: BorderRadius.circular(20.0), // All corners rounded
+                  borderRadius: BorderRadius.circular(20.0),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8),
@@ -61,8 +91,8 @@ class _MainNavigationState extends State<MainNavigation> {
                     iconSize: 24,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     duration: const Duration(milliseconds: 400),
-                    tabBackgroundColor: const Color(0xFFF2711C), // Accent color for selected tab
-                    color: Colors.grey[600], // Unselected icon color
+                    tabBackgroundColor: const Color(0xFFF2711C),
+                    color: Colors.grey[600],
                     tabs: [
                       GButton(
                         icon: FontAwesomeIcons.house,
@@ -86,11 +116,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     selectedIndex: _currentIndex,
                     onTabChange: (index) {
                       if (index == 3 && !userState.isAuthenticated) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
+                        _navigateToLogin();
                         return;
                       }
                       setState(() {
