@@ -8,7 +8,6 @@
 .pub-cache/
 .pub/
 build/
-lib/generated_plugin_registrant.dart
 
 # Flutter build outputs
 **/doc/api/

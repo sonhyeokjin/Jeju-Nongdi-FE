@@ -1,0 +1,50 @@
+# 워크플로우의 이름
+name: Deploy Flutter Web to GitHub Pages
+
+# 이 워크플로우가 실행될 조건 (트리거)
+on:
+  # main 브랜치에 push 이벤트가 발생했을 때만 실행
+  push:
+    branches:
+      - main
+
+# 워크플로우에서 실행될 작업(Job) 목록
+jobs:
+  # build-and-deploy 라는 이름의 단일 작업
+  build-and-deploy:
+    # 작업을 실행할 가상 머신 환경
+    runs-on: ubuntu-latest
+
+    # 작업 내에서 실행될 단계(Step) 목록
+    steps:
+      # 1. 코드 체크아웃
+      # - main 브랜치의 최신 코드를 가상 머신으로 가져옵니다.
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Flutter 환경 설정
+      # - subosito/flutter-action 액션을 사용하여 Flutter SDK를 설치합니다.
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' # 안정 버전 채널 사용
+
+      # 3. 의존성 패키지 설치
+      # - flutter pub get 명령어를 실행합니다.
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 4. Flutter 웹 빌드
+      # - 사용자님의 저장소 이름(Jeju-Nongdi-FE)에 맞게 --base-href 값을 수정했습니다.
+      - name: Build Flutter web
+        run: flutter build web --release --base-href /Jeju-Nongdi-FE/
+
+      # 5. GitHub Pages에 배포
+      # - peaceiris/actions-gh-pages 액션을 사용하여 빌드 결과물을 배포합니다.
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          # GitHub Actions가 제공하는 기본 인증 토큰
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # 배포할 파일이 들어있는 디렉토리 (빌드 결과물 폴더)
+          publish_dir: ./build/web
