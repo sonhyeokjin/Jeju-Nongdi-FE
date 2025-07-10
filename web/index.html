@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!-- HEAD 태그 내용은 기존과 동일하게 유지됩니다 -->
-  <base href="/">
+  <!--
+    이 <base> 태그가 핵심입니다.
+    flutter build 명령어는 $FLUTTER_BASE_HREF 부분을
+    --base-href 옵션의 값으로 자동으로 교체합니다.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
@@ -30,11 +34,7 @@
 <body>
 
 <!--
-  ==========================================================================
-  이 아랫줄을 추가해야 합니다.
-  이 스크립트는 Flutter 앱이 실행되기 전에 카카오맵 API를 미리 로드합니다.
-  appkey는 environment.dart에 있는 JavaScript 키를 사용합니다.
-  ==========================================================================
+  카카오맵 SDK 스크립트입니다. 이 부분은 그대로 유지됩니다.
 -->
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=752d47c1d500b05f00d22e33448215a9&libraries=services,clusterer"></script>
 
