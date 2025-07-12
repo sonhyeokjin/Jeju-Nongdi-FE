@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
@@ -7,7 +8,7 @@ import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/store.dart' as redux_store;
 import 'package:jejunongdi/screens/main_navigation.dart';
 import 'package:jejunongdi/screens/login_screen.dart';
-import 'package:jejunongdi/screens/signup_screen.dart'; // SignupScreen import 추가
+import 'package:jejunongdi/screens/signup_screen.dart';
 import 'package:jejunongdi/core/config/environment.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -15,29 +16,57 @@ import 'package:permission_handler/permission_handler.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 환경 감지 및 설정
+  _detectAndSetEnvironment();
+
   // Redux Store 초기화
   redux_store.initializeStore();
   print('✅ Redux Store 초기화 완료');
 
-  // 네이버 지도 API 키 초기화
-  await FlutterNaverMap().init(
-      clientId: EnvironmentConfig.naverMapClientId,
-      onAuthFailed: (ex) => switch (ex) {
-        NQuotaExceededException(:final message) =>
-            print("사용량 초과 (message: $message)"),
-        NUnauthorizedClientException() ||
-        NClientUnspecifiedException() ||
-        NAnotherAuthFailedException() =>
-            print("인증 실패: $ex"),
-      });
-
-  print('✅ 네이버 지도 API 키 초기화 완료');
+  // 모바일 환경에서만 네이버 지도 API 키 초기화
+  if (!kIsWeb) {
+    print('📱 모바일 플랫폼: 네이버 지도 네이티브 SDK 사용');
+    await FlutterNaverMap().init(
+        clientId: EnvironmentConfig.naverMapClientId,
+        onAuthFailed: (ex) => switch (ex) {
+          NQuotaExceededException(:final message) =>
+              print("사용량 초과 (message: $message)"),
+          NUnauthorizedClientException() ||
+          NClientUnspecifiedException() ||
+          NAnotherAuthFailedException() =>
+              print("인증 실패: $ex"),
+        });
+    print('✅ 네이버 지도 API 키 초기화 완료');
+  } else {
+    print('🌐 웹 플랫폼: 네이버 정적 지도 이미지 사용');
+  }
 
   runApp(
     const ProviderScope(
       child: MyApp(),
     ),
   );
+}
+
+/// 환경 감지 및 설정
+void _detectAndSetEnvironment() {
+  if (kIsWeb) {
+    // 웹 환경에서 GitHub Pages 도메인 감지
+    try {
+      EnvironmentConfig.setEnvironment(Environment.githubPages);
+      print('🌐 GitHub Pages 환경으로 설정됨');
+    } catch (e) {
+      print('⚠️ 환경 감지 실패, 개발 환경으로 설정: $e');
+      EnvironmentConfig.setEnvironment(Environment.development);
+    }
+  } else {
+    // 모바일 환경에서는 기본적으로 개발 환경
+    EnvironmentConfig.setEnvironment(Environment.development);
+    print('📱 모바일 개발 환경으로 설정됨');
+  }
+  
+  print('현재 환경: ${EnvironmentConfig.current.name}');
+  print('네이버맵 Client ID: ${EnvironmentConfig.naverMapClientId}');
 }
 
 
@@ -106,6 +135,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _requestPermissions() async {
     try {
+      // 웹에서는 권한 요청 건너뛰기
+      if (kIsWeb) {
+        print('🌐 웹 플랫폼: 권한 요청 건너뜀');
+        return;
+      }
+      
       final permissions = [
         Permission.location,
         Permission.locationWhenInUse,
@@ -232,9 +267,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 const SizedBox(height: 20),
                 
                 // 로딩 메시지
-                const Text(
-                  '네이버 지도와 권한을 설정하는 중...',
-                  style: TextStyle(
+                Text(
+                  kIsWeb ? '정적 지도와 권한을 설정하는 중...' : '네이버 지도와 권한을 설정하는 중...',
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.white,
                     shadows: [
