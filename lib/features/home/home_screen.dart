@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:lottie/lottie.dart';
-import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:jejunongdi/core/config/environment.dart';
 import 'dart:io';
 
@@ -18,7 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String mapError = '';
   int markerCount = 0;
   bool? internetConnected;
-  double _sheetExtent = 0.3; // DraggableScrollableSheet의 초기 높이와 동일하게 설정
+  double _sheetExtent = 0.3;
   Set<NMarker> markers = {};
 
   // 제주시 중심 좌표
@@ -29,11 +29,26 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     print('🏠 HomeScreen 초기화 시작');
     _checkInternetConnection();
+    
+    // 웹 환경에서는 지도가 바로 준비된 것으로 간주
+    if (kIsWeb) {
+      setState(() {
+        isMapReady = true;
+      });
+    }
   }
 
   // 인터넷 연결 확인
   Future<void> _checkInternetConnection() async {
     try {
+      if (kIsWeb) {
+        setState(() {
+          internetConnected = true;
+        });
+        print('✅ 웹 플랫폼: 인터넷 연결됨으로 가정');
+        return;
+      }
+      
       print('🌐 인터넷 연결 확인 중...');
       final result = await InternetAddress.lookup('google.com');
       if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
@@ -58,15 +73,15 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _sheetExtent = notification.extent;
           });
-          return false; // 알림을 계속 전달
+          return false;
         },
         child: Stack(
           children: [
             // 1. Map (takes full background)
             Positioned.fill(
-              child: IgnorePointer( // 시트가 확장될 때만 지도를 무시
-                ignoring: _sheetExtent > 0.8, // 시트가 최소 높이 이상으로 올라왔을 때 지도를 무시
-                child: _buildNaverMap(),
+              child: IgnorePointer(
+                ignoring: _sheetExtent > 0.8,
+                child: _buildMap(),
               ),
             ),
 
@@ -75,13 +90,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // 3. Draggable bottom sheet
             DraggableScrollableSheet(
-              initialChildSize: 0.3, // 초기 높이 (화면 높이의 30%)
-              minChildSize: 0.1,    // 최소 높이 (아래로 드래그 시)
-              maxChildSize: 0.8,    // 최대 높이 (위로 드래그 시)
+              initialChildSize: 0.3,
+              minChildSize: 0.1,
+              maxChildSize: 0.8,
               expand: true,
-              // 중단점 설정
               snap: true,
-              snapSizes: const [0.1,0.3, 0.8], // 스냅 포인트 설정
+              snapSizes: const [0.1, 0.3, 0.8],
               builder: (BuildContext context, ScrollController scrollController) {
                 return Container(
                   decoration: const BoxDecoration(
@@ -103,14 +117,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           width: 40,
                           height: 4,
-                          margin: const EdgeInsets.symmetric(vertical: 10), // 드래그 핸들 상하 마진 추가
+                          margin: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
                             color: Colors.grey[300],
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
-                      Expanded( // Expanded를 추가하여 남은 공간을 채우도록 함
+                      Expanded(
                         child: SingleChildScrollView(
                           controller: scrollController,
                           child: Padding(
@@ -118,6 +132,35 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
+                                // 플랫폼 정보 표시
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  decoration: BoxDecoration(
+                                    color: kIsWeb ? Colors.blue[50] : Colors.green[50],
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: kIsWeb ? Colors.blue[200]! : Colors.green[200]!,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        kIsWeb ? Icons.web : Icons.phone_android,
+                                        color: kIsWeb ? Colors.blue[600] : Colors.green[600],
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        kIsWeb ? '웹 버전 - 네이버 정적 지도' : '모바일 버전 - 네이버 지도',
+                                        style: TextStyle(
+                                          color: kIsWeb ? Colors.blue[700] : Colors.green[700],
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
                                 // 일자리 찾기 버튼
                                 Container(
                                   height: 64,
@@ -146,11 +189,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                     ),
-                                    child: Row(
+                                    child: const Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        const SizedBox(width: 12),
-                                        const Text(
+                                        SizedBox(width: 12),
+                                        Text(
                                           '일자리 찾기 🔍',
                                           style: TextStyle(
                                             fontSize: 18,
@@ -198,11 +241,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                     ),
-                                    child: Row(
+                                    child: const Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        const SizedBox(width: 12),
-                                        const Text(
+                                        SizedBox(width: 12),
+                                        Text(
                                           '일손 구하기 👥',
                                           style: TextStyle(
                                             fontSize: 18,
@@ -231,8 +274,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 네이버 지도 위젯 빌드
-  Widget _buildNaverMap() {
+  // 지도 위젯 빌드 (플랫폼별 분기)
+  Widget _buildMap() {
     if (internetConnected == false) {
       return const Center(
         child: Text('❌ 인터넷에 연결되지 않았습니다.\n연결을 확인하고 앱을 다시 시작해주세요.'),
@@ -255,6 +298,154 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // 웹 환경이면 정적 지도 이미지 사용
+    if (kIsWeb) {
+      return _buildStaticMap();
+    }
+
+    // 모바일 환경 (기존 네이버맵)
+    return _buildNaverMap();
+  }
+
+  // 정적 지도 이미지 (웹용)
+  Widget _buildStaticMap() {
+    final apiKey = EnvironmentConfig.naverMapClientId;
+    
+    // 제주시 중심의 정적 지도 URL
+    final staticMapUrl = 'https://navermaps.apigw.ntruss.com/map-static/v2/raster-cors?'
+        'w=800&h=600'
+        '&center=${jejuCenter.longitude},${jejuCenter.latitude}'
+        '&level=11'
+        '&markers=type:t|size:mid|pos:${jejuCenter.longitude}%20${jejuCenter.latitude}|label:제주농디'
+        '&X-NCP-APIGW-API-KEY-ID=$apiKey';
+
+    return Stack(
+      children: [
+        // 정적 지도 이미지
+        Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            color: Colors.grey,
+          ),
+          child: Image.network(
+            staticMapUrl,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              print('❌ 정적 지도 로딩 실패: $error');
+              return Container(
+                color: Colors.grey[300],
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.map, size: 80, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        '지도를 불러올 수 없습니다',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '네이버 클라우드 플랫폼에서\n도메인 등록이 필요합니다',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        
+        // 클릭 가능한 마커 영역들
+        ..._buildClickableMarkers(),
+      ],
+    );
+  }
+
+  // 클릭 가능한 마커 영역들 (웹용)
+  List<Widget> _buildClickableMarkers() {
+    return [
+      // 제주시 감귤농장 마커
+      Positioned(
+        left: MediaQuery.of(context).size.width * 0.45,
+        top: MediaQuery.of(context).size.height * 0.35,
+        child: GestureDetector(
+          onTap: () => _showMarkerInfo('farm1', '제주시 감귤농장 - 감귤 수확 일자리'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2711C),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Text(
+              '🍊 감귤농장',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+      
+      // 서귀포 브로콜리농장 마커
+      Positioned(
+        left: MediaQuery.of(context).size.width * 0.50,
+        top: MediaQuery.of(context).size.height * 0.55,
+        child: GestureDetector(
+          onTap: () => _showMarkerInfo('farm2', '서귀포 브로콜리농장 - 브로콜리 포장 일자리'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2711C),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Text(
+              '🥦 브로콜리농장',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+
+  // 네이버맵 (모바일용)
+  Widget _buildNaverMap() {
     return NaverMap(
       options: NaverMapViewOptions(
         initialCameraPosition: NCameraPosition(
@@ -286,6 +477,59 @@ class _HomeScreenState extends State<HomeScreen> {
         // 카메라 이동 완료 시 필요한 로직
       },
     );
+  }
+
+  // 샘플 마커들 추가 (모바일용)
+  void _addSampleMarkers() {
+    if (mapController == null) {
+      print('❌ mapController가 null임');
+      return;
+    }
+
+    print('📍 마커 추가 시작');
+
+    try {
+      final markerList = [
+        NMarker(
+          id: 'farm1',
+          position: const NLatLng(33.5012, 126.5297),
+          caption: NOverlayCaption(text: '제주시 감귤농장'),
+          subCaption: NOverlayCaption(text: '🍊 감귤 수확 일자리'),
+        ),
+        NMarker(
+          id: 'farm2',
+          position: const NLatLng(33.2541, 126.5596),
+          caption: NOverlayCaption(text: '서귀포 브로콜리농장'),
+          subCaption: NOverlayCaption(text: '🥦 브로콜리 포장 일자리'),
+        ),
+      ];
+
+      for (final marker in markerList) {
+        marker.setOnTapListener((NMarker tappedMarker) {
+          final farmNames = {
+            'farm1': '제주시 감귤농장 - 감귤 수확 일자리',
+            'farm2': '서귀포 브로콜리농장 -  브로콜리 포장 일자리',
+          };
+          
+          final info = farmNames[tappedMarker.info.id] ?? '농장 정보';
+          _showMarkerInfo(tappedMarker.info.id, info);
+        });
+        
+        mapController!.addOverlay(marker);
+      }
+      
+      setState(() {
+        markerCount = markerList.length;
+        markers = markerList.toSet();
+      });
+      
+      print('✅ ${markerList.length}개 농장 마커 추가 완료');
+    } catch (e) {
+      print('❌ 마커 추가 실패: $e');
+      setState(() {
+        mapError = '마커 추가 실패: $e';
+      });
+    }
   }
 
   // 플로팅 UI를 만드는 별도의 위젯
@@ -368,65 +612,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 샘플 마커들 추가
-  void _addSampleMarkers() {
-    if (mapController == null) {
-      print('❌ mapController가 null임');
-      return;
-    }
-
-    print('📍 마커 추가 시작');
-
-    try {
-      // 제주도 주요 농장 위치에 마커 추가
-      final markerList = [
-        // 제주시 감귤농장
-        NMarker(
-          id: 'farm1',
-          position: const NLatLng(33.5012, 126.5297),
-          caption: NOverlayCaption(text: '제주시 감귤농장'),
-          subCaption: NOverlayCaption(text: '🍊 감귤 수확 일자리'),
-        ),
-        // 서귀포 브로콜리 농장
-        NMarker(
-          id: 'farm2',
-          position: const NLatLng(33.2541, 126.5596),
-          caption: NOverlayCaption(text: '서귀포 브로콜리농장'),
-          subCaption: NOverlayCaption(text: '🥦 브로콜리 포장 일자리'),
-        ),
-      ];
-
-      // 마커들을 지도에 추가 및 클릭 이벤트 설정
-      for (final marker in markerList) {
-        // 마커 클릭 이벤트 설정
-        marker.setOnTapListener((NMarker tappedMarker) {
-          final farmNames = {
-            'farm1': '제주시 감귤농장 - 감귤 수확 일자리',
-            'farm2': '서귀포 브로콜리농장 -  브로콜리 포장 일자리',
-          };
-          
-          final info = farmNames[tappedMarker.info.id] ?? '농장 정보';
-          _showMarkerInfo(tappedMarker.info.id, info);
-        });
-        
-        // 지도에 마커 추가
-        mapController!.addOverlay(marker);
-      }
-      
-      setState(() {
-        markerCount = markerList.length;
-        markers = markerList.toSet();
-      });
-      
-      print('✅ ${markerList.length}개 농장 마커 추가 완료');
-    } catch (e) {
-      print('❌ 마커 추가 실패: $e');
-      setState(() {
-        mapError = '마커 추가 실패: $e';
-      });
-    }
-  }
-
   // 마커 정보 표시
   void _showMarkerInfo(String title, String description) {
     showDialog(
@@ -466,13 +651,19 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('📊 연결 상태:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('플랫폼: ${kIsWeb ? "웹" : "모바일"}'),
+                Text('지도 타입: ${kIsWeb ? "정적 이미지" : "네이버맵"}'),
                 Text('인터넷: ${_getInternetStatusText()}'),
                 Text('지도 준비: ${isMapReady ? "✅ 완료" : "⏳ 로딩 중"}'),
-                Text('지도 컨트롤러: ${mapController != null ? "✅ 활성" : "❌ 없음"}'),
-                Text('마커 개수: $markerCount개'),
+                if (!kIsWeb) ...[
+                  Text('지도 컨트롤러: ${mapController != null ? "✅ 활성" : "❌ 없음"}'),
+                  Text('마커 개수: $markerCount개'),
+                ],
                 const SizedBox(height: 8),
-                const Text('🔧 네이버 지도 설정:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('Client ID: ${EnvironmentConfig.naverMapClientId}'),
+                if (!kIsWeb) ...[
+                  const Text('🔧 네이버 지도 설정:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Client ID: ${EnvironmentConfig.naverMapClientId}'),
+                ],
                 Text('환경: ${EnvironmentConfig.current.name}'),
                 const SizedBox(height: 8),
                 if (mapError.isNotEmpty) ...[
@@ -480,13 +671,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(mapError, style: const TextStyle(color: Colors.red)),
                   const SizedBox(height: 8),
                 ],
-                const Text('💡 문제 해결 방법:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const Text('1. 인터넷 연결 확인'),
-                const Text('2. 위치 권한 승인'),
-                const Text('3. 앱 재시작'),
-                const Text('4. 네이버 클라우드 플랫폼 설정 확인'),
-                const Text('5. VPN 또는 방화벽 확인'),
-                const Text('6. API 사용량 한도 확인'),
+                const Text('💡 웹에서 사용법:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('• 웹에서는 정적 지도 이미지 사용'),
+                const Text('• 마커 클릭 시 농장 정보 표시'),
+                const Text('• GitHub Pages 배포 지원'),
               ],
             ),
           ),
@@ -534,60 +722,20 @@ class _HomeScreenState extends State<HomeScreen> {
     print('🔄 지도 초기화 재시도');
   }
 
-  // 상태별 색상 및 메시지 헬퍼 메서드들
-  Color _getStatusColor() {
-    if (mapError.isNotEmpty) return Colors.red[50]!;
-    if (isMapReady) return Colors.green[50]!;
-    return Colors.orange[50]!;
-  }
-
-  Color _getStatusBorderColor() {
-    if (mapError.isNotEmpty) return Colors.red[200]!;
-    if (isMapReady) return Colors.green[200]!;
-    return Colors.orange[200]!;
-  }
-
-  IconData _getStatusIcon() {
-    if (mapError.isNotEmpty) return Icons.error;
-    if (isMapReady) return Icons.check_circle;
-    return Icons.access_time;
-  }
-
-  Color _getStatusIconColor() {
-    if (mapError.isNotEmpty) return Colors.red[600]!;
-    if (isMapReady) return Colors.green[600]!;
-    return Colors.orange[600]!;
-  }
-
-  Color _getStatusTextColor() {
-    if (mapError.isNotEmpty) return Colors.red[700]!;
-    if (isMapReady) return Colors.green[700]!;
-    return Colors.orange[700]!;
-  }
-
-  String _getStatusMessage() {
-    if (mapError.isNotEmpty) return '❌ 지도 로드 실패';
-    if (isMapReady) return '지도 로드 ($markerCount개 농장 표시)';
-    return '⏳ 지도 로딩 중...';
-  }
-
   // 현재 위치로 이동
   void _moveToCurrentLocation() {
-    if (mapController != null && isMapReady) {
-      // 제주시 중심으로 이동
-      // mapController!.updateCamera(
-        // NCameraUpdate.scrollTo(jejuCenter),
-      // );
+    if (isMapReady) {
       print('📍 제주시 중심으로 이동');
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('📍 제주시 중심으로 이동했습니다'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(kIsWeb ? 
+            '📍 정적 지도는 이동할 수 없습니다' : 
+            '📍 제주시 중심으로 이동했습니다'
+          ),
+          duration: const Duration(seconds: 2),
         ),
       );
     } else {
-      print('❌ 지도 컨트롤러가 준비되지 않음 - isMapReady: $isMapReady, mapController: $mapController');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('지도가 아직 로딩 중입니다.'),
