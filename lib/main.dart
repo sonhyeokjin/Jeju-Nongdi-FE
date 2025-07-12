@@ -9,7 +9,7 @@ import 'package:jejunongdi/screens/main_navigation.dart';
 import 'package:jejunongdi/screens/login_screen.dart';
 import 'package:jejunongdi/screens/signup_screen.dart'; // SignupScreen import 추가
 import 'package:jejunongdi/core/config/environment.dart';
-import 'package:kakao_map_plugin/kakao_map_plugin.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 Future<void> main() async {
@@ -19,9 +19,19 @@ Future<void> main() async {
   redux_store.initializeStore();
   print('✅ Redux Store 초기화 완료');
 
-  // 카카오맵 API 키 초기화
-  AuthRepository.initialize(appKey: EnvironmentConfig.kakaoMapApiKey);
-  print('✅ 카카오맵 API 키 초기화 완료: ');
+  // 네이버 지도 API 키 초기화
+  await FlutterNaverMap().init(
+      clientId: EnvironmentConfig.naverMapClientId,
+      onAuthFailed: (ex) => switch (ex) {
+        NQuotaExceededException(:final message) =>
+            print("사용량 초과 (message: $message)"),
+        NUnauthorizedClientException() ||
+        NClientUnspecifiedException() ||
+        NAnotherAuthFailedException() =>
+            print("인증 실패: $ex"),
+      });
+
+  print('✅ 네이버 지도 API 키 초기화 완료');
 
   runApp(
     const ProviderScope(
@@ -223,7 +233,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 
                 // 로딩 메시지
                 const Text(
-                  '지도와 권한을 설정하는 중...',
+                  '네이버 지도와 권한을 설정하는 중...',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white,

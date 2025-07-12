@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:kakao_map_plugin/kakao_map_plugin.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:lottie/lottie.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:jejunongdi/core/config/environment.dart';
 import 'dart:io';
 
@@ -11,15 +13,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  KakaoMapController? mapController;
+  NaverMapController? mapController;
   bool isMapReady = false;
   String mapError = '';
   int markerCount = 0;
   bool? internetConnected;
   double _sheetExtent = 0.3; // DraggableScrollableSheet의 초기 높이와 동일하게 설정
+  Set<NMarker> markers = {};
 
   // 제주시 중심 좌표
-  static final LatLng jejuCenter = LatLng(33.4996, 126.5312);
+  static const NLatLng jejuCenter = NLatLng(33.4996, 126.5312);
 
   @override
   void initState() {
@@ -38,31 +41,12 @@ class _HomeScreenState extends State<HomeScreen> {
           internetConnected = true;
         });
         print('✅ 인터넷 연결됨');
-        
-        // 카카오맵 API 연결 테스트
-        _testKakaoMapConnection();
       }
     } catch (e) {
       setState(() {
         internetConnected = false;
       });
       print('❌ 인터넷 연결 안됨: $e');
-    }
-  }
-
-  // 카카오맵 API 연결 테스트
-  Future<void> _testKakaoMapConnection() async {
-    try {
-      print('🗺️ 카카오맵 API 연결 테스트 중...');
-      final result = await InternetAddress.lookup('dapi.kakao.com');
-      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-        print('✅ 카카오맵 API 서버 연결됨');
-      }
-    } catch (e) {
-      print('❌ 카카오맵 API 서버 연결 실패: $e');
-      setState(() {
-        mapError = '카카오맵 API 서버 연결 실패: $e';
-      });
     }
   }
 
@@ -81,8 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // 1. Map (takes full background)
             Positioned.fill(
               child: IgnorePointer( // 시트가 확장될 때만 지도를 무시
-                ignoring: _sheetExtent > 0.15, // 시트가 최소 높이 이상으로 올라왔을 때 지도를 무시
-                child: _buildKakaoMap(),
+                ignoring: _sheetExtent > 0.8, // 시트가 최소 높이 이상으로 올라왔을 때 지도를 무시
+                child: _buildNaverMap(),
               ),
             ),
 
@@ -247,8 +231,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 카카오 지도 위젯 빌드
-  Widget _buildKakaoMap() {
+  // 네이버 지도 위젯 빌드
+  Widget _buildNaverMap() {
     if (internetConnected == false) {
       return const Center(
         child: Text('❌ 인터넷에 연결되지 않았습니다.\n연결을 확인하고 앱을 다시 시작해주세요.'),
@@ -271,18 +255,36 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return KakaoMap(
-      onMapCreated: (KakaoMapController controller) {
+    return NaverMap(
+      options: NaverMapViewOptions(
+        initialCameraPosition: NCameraPosition(
+          target: jejuCenter,
+          zoom: 15,
+        ),
+        mapType: NMapType.basic,
+        activeLayerGroups: [NLayerGroup.building, NLayerGroup.traffic],
+        minZoom: 5,
+        maxZoom: 18,
+      ),
+      onMapReady: (NaverMapController controller) {
         if (!mounted) return;
-        print('🗺️ 카카오맵 onMapCreated 콜백 호출됨');
+        print('네이버 지도 onMapReady 콜백 호출됨');
         setState(() {
           mapController = controller;
           isMapReady = true;
         });
-        print('✅ 카카오맵 생성 완료');
+        print('네이버 지도 생성');
         _addSampleMarkers();
       },
-      center: jejuCenter,
+      onMapTapped: (point, latLng) {
+        print('지도 탭: ${latLng.latitude}, ${latLng.longitude}');
+      },
+      onCameraChange: (position, reason) {
+        // 카메라 변경 시 필요한 로직
+      },
+      onCameraIdle: () {
+        // 카메라 이동 완료 시 필요한 로직
+      },
     );
   }
 
@@ -377,48 +379,78 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       // 제주도 주요 농장 위치에 마커 추가
-      final markers = [
+      final markerList = [
         // 제주시 감귤농장
-        Marker(
-          markerId: 'farm1',
-          latLng: LatLng(33.5012, 126.5297),
+        NMarker(
+          id: 'farm1',
+          position: const NLatLng(33.5012, 126.5297),
+          caption: NOverlayCaption(text: '제주시 감귤농장'),
+          subCaption: NOverlayCaption(text: '🍊 감귤 수확 일자리'),
         ),
         // 서귀포 브로콜리 농장
-        Marker(
-          markerId: 'farm2',
-          latLng: LatLng(33.2541, 126.5596),
-        ),
-        // 애월 고구마 농장
-        Marker(
-          markerId: 'farm3',
-          latLng: LatLng(33.4619, 126.3309),
-        ),
-        // 성산 양파 농장
-        Marker(
-          markerId: 'farm4',
-          latLng: LatLng(33.4593, 126.9419),
-        ),
-        // 한림 배추 농장
-        Marker(
-          markerId: 'farm5',
-          latLng: LatLng(33.4141, 126.2692),
+        NMarker(
+          id: 'farm2',
+          position: const NLatLng(33.2541, 126.5596),
+          caption: NOverlayCaption(text: '서귀포 브로콜리농장'),
+          subCaption: NOverlayCaption(text: '🥦 브로콜리 포장 일자리'),
         ),
       ];
 
-      // 마커들을 지도에 추가
-      mapController!.addMarker(markers: markers);
+      // 마커들을 지도에 추가 및 클릭 이벤트 설정
+      for (final marker in markerList) {
+        // 마커 클릭 이벤트 설정
+        marker.setOnTapListener((NMarker tappedMarker) {
+          final farmNames = {
+            'farm1': '제주시 감귤농장 - 감귤 수확 일자리',
+            'farm2': '서귀포 브로콜리농장 -  브로콜리 포장 일자리',
+          };
+          
+          final info = farmNames[tappedMarker.info.id] ?? '농장 정보';
+          _showMarkerInfo(tappedMarker.info.id, info);
+        });
+        
+        // 지도에 마커 추가
+        mapController!.addOverlay(marker);
+      }
       
       setState(() {
-        markerCount = markers.length;
+        markerCount = markerList.length;
+        markers = markerList.toSet();
       });
       
-      print('✅ ${markers.length}개 농장 마커 추가 완료');
+      print('✅ ${markerList.length}개 농장 마커 추가 완료');
     } catch (e) {
       print('❌ 마커 추가 실패: $e');
       setState(() {
         mapError = '마커 추가 실패: $e';
       });
     }
+  }
+
+  // 마커 정보 표시
+  void _showMarkerInfo(String title, String description) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(description),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('확인'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showJobSearch();
+              },
+              child: const Text('자세히 보기'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // 지도 디버그 정보 표시
@@ -439,8 +471,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text('지도 컨트롤러: ${mapController != null ? "✅ 활성" : "❌ 없음"}'),
                 Text('마커 개수: $markerCount개'),
                 const SizedBox(height: 8),
-                const Text('🔧 카카오맵 설정:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('API 키: ${EnvironmentConfig.kakaoMapApiKey}'),
+                const Text('🔧 네이버 지도 설정:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Client ID: ${EnvironmentConfig.naverMapClientId}'),
                 Text('환경: ${EnvironmentConfig.current.name}'),
                 const SizedBox(height: 8),
                 if (mapError.isNotEmpty) ...[
@@ -452,8 +484,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Text('1. 인터넷 연결 확인'),
                 const Text('2. 위치 권한 승인'),
                 const Text('3. 앱 재시작'),
-                const Text('4. 카카오 개발자 콘솔 설정 확인'),
+                const Text('4. 네이버 클라우드 플랫폼 설정 확인'),
                 const Text('5. VPN 또는 방화벽 확인'),
+                const Text('6. API 사용량 한도 확인'),
               ],
             ),
           ),
@@ -496,11 +529,10 @@ class _HomeScreenState extends State<HomeScreen> {
       mapError = '';
       mapController = null;
       markerCount = 0;
+      markers.clear();
     });
     print('🔄 지도 초기화 재시도');
   }
-
-  
 
   // 상태별 색상 및 메시지 헬퍼 메서드들
   Color _getStatusColor() {
@@ -535,7 +567,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getStatusMessage() {
     if (mapError.isNotEmpty) return '❌ 지도 로드 실패';
-    if (isMapReady) return '✅ 지도 로드 완료 ($markerCount개 농장 표시)';
+    if (isMapReady) return '지도 로드 ($markerCount개 농장 표시)';
     return '⏳ 지도 로딩 중...';
   }
 
@@ -543,7 +575,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _moveToCurrentLocation() {
     if (mapController != null && isMapReady) {
       // 제주시 중심으로 이동
-      mapController!.panTo(jejuCenter);
+      // mapController!.updateCamera(
+        // NCameraUpdate.scrollTo(jejuCenter),
+      // );
       print('📍 제주시 중심으로 이동');
 
       ScaffoldMessenger.of(context).showSnackBar(

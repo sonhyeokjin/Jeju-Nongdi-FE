@@ -36,10 +36,10 @@
             </intent-filter>
         </activity>
 
-        <!-- 카카오맵 API 키 설정 -->
+        <!-- 네이버 지도 API 키 설정 -->
         <meta-data
-            android:name="com.kakao.vectormap.APP_KEY"
-            android:value="752d47c1d500b05f00d22e33448215a9"/>
+            android:name="com.naver.maps.map.CLIENT_ID"
+            android:value="be8jif7owm"/>
         
         <!-- Flutter 메타데이터 -->
         <meta-data
