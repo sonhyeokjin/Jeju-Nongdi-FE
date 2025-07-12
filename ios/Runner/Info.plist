@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NMFClientId</key>
+    <string>be8jif7owm</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -58,8 +60,8 @@
 		<!-- 특정 도메인별 설정 -->
 		<key>NSExceptionDomains</key>
 		<dict>
-			<!-- 카카오맵 도메인 -->
-			<key>dapi.kakao.com</key>
+			<!-- 네이버 지도 도메인 -->
+			<key>navermaps.ncloud.com</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
@@ -68,14 +70,7 @@
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
-			<key>t1.daumcdn.net</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-			</dict>
-			<key>map2.daumcdn.net</key>
+			<key>naver.com</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
@@ -91,14 +86,6 @@
 		</dict>
 	</dict>
 	
-	<!-- 카카오맵 설정 -->
-	<key>KAKAO_APP_KEY</key>
-	<string>752d47c1d500b05f00d22e33448215a9</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>kakaomap-api</string>
-	</array>
-
 	<!-- 위치 권한 설정 -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>주변 농장과 일자리를 찾기 위해 위치 정보가 필요합니다.</string>
