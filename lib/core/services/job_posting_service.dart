@@ -42,4 +42,64 @@ class JobPostingService {
       }
     }
   }
+
+  /// 지도 범위 내의 일손 모집 공고 목록을 가져옵니다.
+  Future<ApiResult<List<JobPostingResponse>>> getJobPostingsByBounds({
+    required double minLat,
+    required double maxLat,
+    required double minLng,
+    required double maxLng,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      Logger.info('지도 범위 내 일손 모집 공고 조회 시도: minLat=$minLat, maxLat=$maxLat, minLng=$minLng, maxLng=$maxLng');
+
+      // GET 요청으로 범위 내 공고 목록 데이터를 받아옵니다.
+      final response = await _apiClient.get(
+        '/api/job-postings/bounds',
+        queryParameters: {
+          'minLat': minLat,
+          'maxLat': maxLat,
+          'minLng': minLng,
+          'maxLng': maxLng,
+          'page': page,
+          'size': size,
+        },
+      );
+
+      if (response.data != null) {
+        List<dynamic> jobPostingsData;
+        
+        // 응답 데이터 타입에 따라 처리
+        if (response.data is List) {
+          // 직접 리스트로 응답이 온 경우
+          jobPostingsData = response.data as List<dynamic>;
+        } else if (response.data is Map<String, dynamic>) {
+          // 페이징된 응답으로 온 경우 (content 필드에 실제 데이터)
+          final responseMap = response.data as Map<String, dynamic>;
+          jobPostingsData = responseMap['content'] as List<dynamic>? ?? [];
+        } else {
+          jobPostingsData = [];
+        }
+
+        // 받아온 데이터를 List<JobPostingResponse>로 변환합니다.
+        final jobPostings = jobPostingsData
+            .map((item) => JobPostingResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        Logger.info('지도 범위 내 일손 모집 공고 조회 성공: ${jobPostings.length}개');
+        return ApiResult.success(jobPostings);
+      } else {
+        return ApiResult.failure(const UnknownException('범위 내 공고 목록 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('지도 범위 내 일손 모집 공고 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('범위 내 공고 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
 }
