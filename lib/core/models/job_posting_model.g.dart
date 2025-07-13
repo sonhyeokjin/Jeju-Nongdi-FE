@@ -106,3 +106,68 @@ Map<String, dynamic> _$JobPostingPageResponseToJson(
   'last': instance.last,
   'empty': instance.empty,
 };
+
+JobPostingRequest _$JobPostingRequestFromJson(Map<String, dynamic> json) =>
+    JobPostingRequest(
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      farmName: json['farmName'] as String,
+      address: json['address'] as String,
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      cropType: $enumDecode(_$CropTypeEnumMap, json['cropType']),
+      workType: $enumDecode(_$WorkTypeEnumMap, json['workType']),
+      wages: (json['wages'] as num).toInt(),
+      wageType:
+          $enumDecodeNullable(_$WageTypeEnumMap, json['wageType']) ??
+          WageType.daily,
+      workStartDate: json['workStartDate'] as String,
+      workEndDate: json['workEndDate'] as String,
+      recruitmentCount: (json['recruitmentCount'] as num).toInt(),
+      contactPhone: json['contactPhone'] as String?,
+      contactEmail: json['contactEmail'] as String?,
+    );
+
+Map<String, dynamic> _$JobPostingRequestToJson(JobPostingRequest instance) =>
+    <String, dynamic>{
+      'title': instance.title,
+      'description': instance.description,
+      'farmName': instance.farmName,
+      'address': instance.address,
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'cropType': _$CropTypeEnumMap[instance.cropType]!,
+      'workType': _$WorkTypeEnumMap[instance.workType]!,
+      'wages': instance.wages,
+      'wageType': _$WageTypeEnumMap[instance.wageType]!,
+      'workStartDate': instance.workStartDate,
+      'workEndDate': instance.workEndDate,
+      'recruitmentCount': instance.recruitmentCount,
+      'contactPhone': instance.contactPhone,
+      'contactEmail': instance.contactEmail,
+    };
+
+const _$CropTypeEnumMap = {
+  CropType.citrus: 'CITRUS',
+  CropType.vegetable: 'VEGETABLE',
+  CropType.grain: 'GRAIN',
+  CropType.fruit: 'FRUIT',
+  CropType.flower: 'FLOWER',
+  CropType.other: 'OTHER',
+};
+
+const _$WorkTypeEnumMap = {
+  WorkType.planting: 'PLANTING',
+  WorkType.harvesting: 'HARVESTING',
+  WorkType.weeding: 'WEEDING',
+  WorkType.pruning: 'PRUNING',
+  WorkType.packaging: 'PACKAGING',
+  WorkType.other: 'OTHER',
+};
+
+const _$WageTypeEnumMap = {
+  WageType.hourly: 'HOURLY',
+  WageType.daily: 'DAILY',
+  WageType.monthly: 'MONTHLY',
+  WageType.pieceRate: 'PIECE_RATE',
+};

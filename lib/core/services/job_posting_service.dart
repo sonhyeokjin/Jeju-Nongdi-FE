@@ -80,6 +80,34 @@ class JobPostingService {
     }
   }
 
+  /// 새로운 일손 모집 공고를 등록합니다.
+  Future<ApiResult<JobPostingResponse>> createJobPosting(JobPostingRequest request) async {
+    try {
+      Logger.info('일손 모집 공고 등록 시도');
+
+      // POST 요청으로 새 공고를 등록합니다.
+      final response = await _apiClient.post(
+        '/api/job-postings',
+        data: request.toJson(),
+      );
+
+      if (response.data != null) {
+        final jobPosting = JobPostingResponse.fromJson(response.data as Map<String, dynamic>);
+        Logger.info('일손 모집 공고 등록 성공: ${jobPosting.id}');
+        return ApiResult.success(jobPosting);
+      } else {
+        return ApiResult.failure(const UnknownException('공고 등록 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('일손 모집 공고 등록 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('공고 등록 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
   /// 지도 범위 내의 일손 모집 공고 목록을 가져옵니다.
   Future<ApiResult<List<JobPostingResponse>>> getJobPostingsByBounds({
     required double minLat,

@@ -6,6 +6,7 @@ import 'package:jejunongdi/core/services/job_posting_service.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
 import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
 import 'package:jejunongdi/screens/job_list_screen.dart';
+import 'package:jejunongdi/screens/job_posting_create_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -458,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ],
                                   ),
                                   child: ElevatedButton(
-                                    onPressed: _showWorkerRecruit,
+                                    onPressed: _navigateToJobCreate,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       shadowColor: Colors.transparent,
@@ -500,59 +501,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 일손 구하기
-  void _showWorkerRecruit() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          height: MediaQuery.of(context).size.height * 0.7,
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '🚜 일손 구하기',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 20),
-              Text(
-                '농장에서 필요한 일손을 구해보세요',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-              ),
-              SizedBox(height: 100),
-              Center(
-                child: Text(
-                  '일손 구하기 기능은\n준비 중입니다.',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   // 일자리 목록 화면으로 이동
   void _navigateToJobList() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const JobListScreen(),
+      ),
+    );
+  }
+
+  // 공고 등록 화면으로 이동
+  void _navigateToJobCreate() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const JobPostingCreateScreen(),
       ),
     );
   }
