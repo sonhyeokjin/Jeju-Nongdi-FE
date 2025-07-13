@@ -78,3 +78,31 @@ Map<String, dynamic> _$JobPostingResponseToJson(JobPostingResponse instance) =>
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
     };
+
+JobPostingPageResponse _$JobPostingPageResponseFromJson(
+  Map<String, dynamic> json,
+) => JobPostingPageResponse(
+  content: (json['content'] as List<dynamic>)
+      .map((e) => JobPostingResponse.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  totalElements: (json['totalElements'] as num).toInt(),
+  totalPages: (json['totalPages'] as num).toInt(),
+  size: (json['size'] as num).toInt(),
+  number: (json['number'] as num).toInt(),
+  first: json['first'] as bool,
+  last: json['last'] as bool,
+  empty: json['empty'] as bool,
+);
+
+Map<String, dynamic> _$JobPostingPageResponseToJson(
+  JobPostingPageResponse instance,
+) => <String, dynamic>{
+  'content': instance.content,
+  'totalElements': instance.totalElements,
+  'totalPages': instance.totalPages,
+  'size': instance.size,
+  'number': instance.number,
+  'first': instance.first,
+  'last': instance.last,
+  'empty': instance.empty,
+};
