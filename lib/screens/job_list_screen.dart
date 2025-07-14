@@ -4,6 +4,7 @@ import 'package:jejunongdi/core/models/job_posting_model.dart';
 import 'package:jejunongdi/core/services/job_posting_service.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
 import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
+import 'package:jejunongdi/screens/job_posting_detail_screen.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key});
@@ -317,7 +318,13 @@ class _JobListScreenState extends State<JobListScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: () => _showJobPostingDetails(jobPosting),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => JobPostingDetailScreen(jobPostingId: jobPosting.id),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),

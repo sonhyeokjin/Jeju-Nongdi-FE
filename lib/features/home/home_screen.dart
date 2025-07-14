@@ -6,6 +6,7 @@ import 'package:jejunongdi/core/services/job_posting_service.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
 import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
 import 'package:jejunongdi/screens/job_list_screen.dart';
+import 'package:jejunongdi/screens/job_posting_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -148,13 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showJobPostingDetails(JobPostingResponse jobPosting) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => JobPostingDetailScreen(jobPostingId: jobPosting.id),
       ),
-      builder: (context) => JobPostingDetailSheet(jobPosting: jobPosting),
     );
   }
 
