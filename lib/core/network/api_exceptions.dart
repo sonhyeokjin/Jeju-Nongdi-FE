@@ -131,6 +131,18 @@ class ApiResult<T> {
     throw error ?? UnknownException('No data available');
   }
   
+  // 패턴 매칭 스타일 처리
+  R when<R>({
+    required R Function(T data) success,
+    required R Function(ApiException error) failure,
+  }) {
+    if (isSuccess && data != null) {
+      return success(data as T);
+    } else {
+      return failure(error!);
+    }
+  }
+  
   @override
   String toString() {
     if (isSuccess) {

@@ -6,7 +6,7 @@ import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/user/user_state.dart';
 import 'package:jejunongdi/features/home/home_screen.dart';
 import 'package:jejunongdi/screens/login_screen.dart';
-import 'package:jejunongdi/screens/my_activities_screen.dart';
+import 'package:jejunongdi/screens/mentoring_list_screen.dart';
 import 'package:jejunongdi/screens/chat_screen.dart';
 import 'package:jejunongdi/screens/my_page_screen.dart';
 
@@ -74,7 +74,7 @@ class _MainNavigationState extends State<MainNavigation> {
             index: _currentIndex,
             children: [
               const HomeScreen(),
-              const MyActivitiesScreen(),
+              const MentoringListScreen(),
               const ChatScreen(),
               // MY농디 탭: 로그인 상태에 따라 다른 화면 표시
               userState.isAuthenticated
@@ -127,7 +127,7 @@ class _MainNavigationState extends State<MainNavigation> {
                       ),
                       GButton(
                         icon: FontAwesomeIcons.clipboardList,
-                        text: '내 활동',
+                        text: '멘토링',
                       ),
                       GButton(
                         icon: FontAwesomeIcons.solidCommentDots,
