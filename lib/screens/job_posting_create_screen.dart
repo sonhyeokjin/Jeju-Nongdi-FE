@@ -7,13 +7,6 @@ import 'package:jejunongdi/core/utils/validators.dart';
 import 'package:intl/intl.dart';
 import 'package:kpostal/kpostal.dart';
 
-class EnvironmentConfig {
-  static const String kakaoMapApiKey = String.fromEnvironment(
-    '752d47c1d500b05f00d22e33448215a9',
-    defaultValue: 'development_key_here',
-  );
-}
-
 class JobPostingCreateScreen extends StatefulWidget {
   const JobPostingCreateScreen({super.key});
 
@@ -351,18 +344,23 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
         suffixIcon: const Icon(FontAwesomeIcons.magnifyingGlass, size: 14, color: Colors.grey),
       ),
       validator: Validators.required,
-      onTap: () async {
-        await Navigator.push(
+      onTap: () {
+        Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => KpostalView(
-              kakaoKey: EnvironmentConfig.kakaoMapApiKey,
+              kakaoKey: EnvironmentConfig.kakaoJavascriptKey,
               callback: (Kpostal result) {
-                setState(() {
-                  _addressController.text = result.address;
-                  _latitude = result.latitude;
-                  _longitude = result.longitude;
-                });
+                if (mounted) {
+                  setState(() {
+                    _addressController.text = result.address;
+                    _latitude = result.latitude;
+                    _longitude = result.longitude;
+                  });
+                  print(result);
+                  // 주소 선택 후 명시적으로 KpostalView 페이지 닫기
+                  Navigator.pop(context);
+                }
               },
             ),
           ),
@@ -370,6 +368,7 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
       },
     );
   }
+
 
   Widget _buildStyledTextField({required TextEditingController controller, required String labelText, String? hintText, required IconData icon, TextInputType? keyboardType, bool obscureText = false, String? Function(String?)? validator}) {
     return TextFormField(
