@@ -166,4 +166,33 @@ class JobPostingService {
       }
     }
   }
+
+  /// 새로운 일손 모집 공고를 등록합니다.
+  Future<ApiResult<JobPostingResponse>> createJobPosting(JobPostingRequest request) async {
+    try {
+      Logger.info('새로운 일손 모집 공고 등록 시도');
+
+      // POST 요청으로 새로운 공고 데이터를 전송합니다.
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/job-postings',
+        data: request.toJson(),
+      );
+
+      if (response.data != null) {
+        // 성공적으로 생성된 공고 정보를 반환받아 모델로 변환합니다.
+        final newPosting = JobPostingResponse.fromJson(response.data!);
+        Logger.info('공고 등록 성공: ${newPosting.title}');
+        return ApiResult.success(newPosting);
+      } else {
+        return ApiResult.failure(const UnknownException('공고 등록 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('공고 등록 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('공고 등록 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
 }
