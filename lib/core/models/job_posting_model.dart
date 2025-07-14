@@ -83,3 +83,31 @@ class JobPostingResponse {
       _$JobPostingResponseFromJson(json);
   Map<String, dynamic> toJson() => _$JobPostingResponseToJson(this);
 }
+
+// 페이징된 일손 모집 공고 응답을 위한 모델
+@JsonSerializable()
+class JobPostingPageResponse {
+  final List<JobPostingResponse> content;
+  final int totalElements;
+  final int totalPages;
+  final int size;
+  final int number;
+  final bool first;
+  final bool last;
+  final bool empty;
+
+  JobPostingPageResponse({
+    required this.content,
+    required this.totalElements,
+    required this.totalPages,
+    required this.size,
+    required this.number,
+    required this.first,
+    required this.last,
+    required this.empty,
+  });
+
+  factory JobPostingPageResponse.fromJson(Map<String, dynamic> json) =>
+      _$JobPostingPageResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$JobPostingPageResponseToJson(this);
+}

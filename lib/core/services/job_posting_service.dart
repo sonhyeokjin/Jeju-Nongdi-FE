@@ -43,6 +43,43 @@ class JobPostingService {
     }
   }
 
+  /// 페이징 지원 일손 모집 공고 목록을 가져옵니다.
+  Future<ApiResult<JobPostingPageResponse>> getJobPostingsPaged({
+    int page = 0,
+    int size = 20,
+    String sort = 'createdAt',
+    String direction = 'DESC',
+  }) async {
+    try {
+      Logger.info('페이징 일손 모집 공고 목록 조회 시도: page=$page, size=$size');
+
+      // GET 요청으로 페이징된 공고 목록 데이터를 받아옵니다.
+      final response = await _apiClient.get(
+        '/api/job-postings',
+        queryParameters: {
+          'page': page,
+          'size': size,
+          'sort': '$sort,$direction',
+        },
+      );
+
+      if (response.data != null) {
+        final pageData = JobPostingPageResponse.fromJson(response.data as Map<String, dynamic>);
+        Logger.info('페이징 일손 모집 공고 목록 조회 성공: ${pageData.content.length}개 (총 ${pageData.totalElements}개)');
+        return ApiResult.success(pageData);
+      } else {
+        return ApiResult.failure(const UnknownException('페이징 공고 목록 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('페이징 일손 모집 공고 목록 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('페이징 공고 목록 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
   /// 지도 범위 내의 일손 모집 공고 목록을 가져옵니다.
   Future<ApiResult<List<JobPostingResponse>>> getJobPostingsByBounds({
     required double minLat,
@@ -70,7 +107,7 @@ class JobPostingService {
 
       if (response.data != null) {
         List<dynamic> jobPostingsData;
-        
+
         // 응답 데이터 타입에 따라 처리
         if (response.data is List) {
           // 직접 리스트로 응답이 온 경우
@@ -99,6 +136,33 @@ class JobPostingService {
         return ApiResult.failure(e);
       } else {
         return ApiResult.failure(UnknownException('범위 내 공고 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  Future<ApiResult<JobPostingResponse>> getJobPostingById(int jobPostingId) async {
+    try {
+      Logger.info('ID($jobPostingId)로 공고 상세 정보 조회 시도');
+
+      // GET 요청으로 특정 공고 데이터를 받아옵니다.
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/job-postings/$jobPostingId',
+      );
+
+      if (response.data != null) {
+        // 받아온 데이터를 JobPostingResponse 모델로 변환합니다.
+        final jobPosting = JobPostingResponse.fromJson(response.data!);
+        Logger.info('공고 상세 정보 조회 성공: ${jobPosting.title}');
+        return ApiResult.success(jobPosting);
+      } else {
+        return ApiResult.failure(const UnknownException('공고 상세 정보 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('공고 상세 정보 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('공고 상세 정보 조회 중 오류가 발생했습니다: $e'));
       }
     }
   }
