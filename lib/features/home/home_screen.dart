@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/job_posting_model.dart';
 import 'package:jejunongdi/core/services/job_posting_service.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
-import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
+import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/screens/job_list_screen.dart';
-import 'package:jejunongdi/screens/job_posting_detail_screen.dart';
+import 'package:jejunongdi/screens/login_screen.dart';
+import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
+import 'package:jejunongdi/screens/job_posting_create_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,7 +27,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   double _sheetExtent = 0.3;
 
-  // 제주도 중심 좌표
   static const NLatLng _initialPosition = NLatLng(33.375, 126.49);
 
   @override
@@ -41,20 +43,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onMapReady(NaverMapController controller) {
     _controller = controller;
     Logger.info('네이버 지도 초기화 완료');
-    
-    // 초기 데이터 로드
     _loadJobPostingsForCurrentView();
   }
 
   void _onCameraChange(NCameraUpdateReason reason, bool animated) {
-    // 지도 이동 중에는 API 호출하지 않음
     Logger.debug('카메라 이동 중: $reason');
   }
 
   void _onCameraIdle() {
-    // 지도 이동이 완료된 후 디바운스를 적용하여 API 호출
     Logger.debug('카메라 이동 완료');
-    
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 800), () {
       _loadJobPostingsForCurrentView();
@@ -63,25 +60,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadJobPostingsForCurrentView() async {
     if (!mounted || _controller == null) return;
-
     setState(() {
       _isLoading = true;
     });
-
     try {
-      // 현재 화면의 경계(bounds) 계산
       final bounds = await _controller!.getContentBounds();
-      
       Logger.info('현재 지도 범위: ${bounds.southWest} ~ ${bounds.northEast}');
-
-      // API 호출
       final result = await _jobPostingService.getJobPostingsByBounds(
         minLat: bounds.southWest.latitude,
         maxLat: bounds.northEast.latitude,
         minLng: bounds.southWest.longitude,
         maxLng: bounds.northEast.longitude,
       );
-
       if (result.isSuccess && mounted) {
         await _updateMarkers(result.data!);
       } else if (result.isFailure && mounted) {
@@ -104,20 +94,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _updateMarkers(List<JobPostingResponse> jobPostings) async {
     if (_controller == null) return;
-    
     try {
-      // 기존 마커 제거
       await _controller!.clearOverlays();
       _markers.clear();
-
-      // 새로운 마커 추가
       for (final jobPosting in jobPostings) {
         try {
           final marker = NMarker(
             id: jobPosting.id.toString(),
             position: NLatLng(jobPosting.latitude, jobPosting.longitude),
             caption: NOverlayCaption(
-              text: jobPosting.title.length > 10 
+              text: jobPosting.title.length > 10
                   ? '${jobPosting.title.substring(0, 10)}...'
                   : jobPosting.title,
               textSize: 12,
@@ -126,9 +112,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
 
-          // 마커 클릭 이벤트
+          // ===================================================================
+          // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 부분이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+          // ===================================================================
+          // 마커 클릭 이벤트에 로그인 상태 확인 로직 추가
           marker.setOnTapListener((NMarker marker) {
-            _showJobPostingDetails(jobPosting);
+            final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
+                .state
+                .userState
+                .isAuthenticated;
+
+            if (isAuthenticated) {
+              // 로그인 상태이면, 상세 정보 시트를 보여줍니다.
+              _showJobPostingDetails(jobPosting);
+            } else {
+              // 로그아웃 상태이면, 로그인 안내 다이얼로그를 보여줍니다.
+              _showLoginRequiredDialog();
+            }
           });
 
           _markers.add(marker);
@@ -137,11 +137,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Logger.error('마커 생성 실패: ${jobPosting.id}', error: e);
         }
       }
-
       setState(() {
         _jobPostings = jobPostings;
       });
-
       Logger.info('마커 업데이트 완료: ${jobPostings.length}개');
     } catch (e) {
       Logger.error('마커 업데이트 실패', error: e);
@@ -149,16 +147,44 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showJobPostingDetails(JobPostingResponse jobPosting) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => JobPostingDetailScreen(jobPostingId: jobPosting.id),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => JobPostingDetailSheet(jobPosting: jobPosting),
+    );
+  }
+
+  // [수정] 로그인 필요 안내 다이얼로그 함수 추가
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('로그인 필요'),
+        content: const Text('상세 정보를 보려면 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(); // 다이얼로그 닫기
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+              );
+            },
+            child: const Text('로그인'),
+          ),
+        ],
       ),
     );
   }
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
-    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -197,7 +223,6 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         child: Stack(
           children: [
-            // 1. Map (takes full background)
             Positioned.fill(
               child: IgnorePointer(
                 ignoring: _sheetExtent > 0.8,
@@ -218,15 +243,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // 2. Top floating UI
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // 왼쪽 로고
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       decoration: BoxDecoration(
@@ -249,8 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-
-                    // 오른쪽 아이콘 버튼들
                     Row(
                       children: [
                         if (_isLoading)
@@ -313,8 +333,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // 3. 정보 카드
             Positioned(
               top: 90,
               left: 16,
@@ -338,8 +356,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // 4. Draggable bottom sheet
             DraggableScrollableSheet(
               initialChildSize: 0.3,
               minChildSize: 0.1,
@@ -363,7 +379,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Drag handle
                       Center(
                         child: Container(
                           width: 40,
@@ -383,7 +398,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // 일자리 찾기 버튼
                                 Container(
                                   height: 64,
                                   decoration: BoxDecoration(
@@ -429,10 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 ),
-                                
                                 const SizedBox(height: 16),
-                                
-                                // 일손 구하기 버튼
                                 Container(
                                   height: 64,
                                   decoration: BoxDecoration(
@@ -498,55 +509,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 일손 구하기
   void _showWorkerRecruit() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const JobPostingCreateScreen(),
       ),
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          height: MediaQuery.of(context).size.height * 0.7,
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '🚜 일손 구하기',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 20),
-              Text(
-                '농장에서 필요한 일손을 구해보세요',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-              ),
-              SizedBox(height: 100),
-              Center(
-                child: Text(
-                  '일손 구하기 기능은\n준비 중입니다.',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    ).then((success) {
+      // 등록 성공 후 돌아왔을 때 (true가 반환된 경우)
+      // 지도 데이터를 새로고침합니다.
+      if (success == true) {
+        _loadJobPostingsForCurrentView();
+      }
+    });
   }
 
-  // 일자리 목록 화면으로 이동
   void _navigateToJobList() {
     Navigator.of(context).push(
       MaterialPageRoute(

@@ -106,3 +106,41 @@ Map<String, dynamic> _$JobPostingPageResponseToJson(
   'last': instance.last,
   'empty': instance.empty,
 };
+
+JobPostingRequest _$JobPostingRequestFromJson(Map<String, dynamic> json) =>
+    JobPostingRequest(
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      farmName: json['farmName'] as String,
+      address: json['address'] as String,
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      cropType: json['cropType'] as String,
+      workType: json['workType'] as String,
+      wages: (json['wages'] as num).toInt(),
+      wageType: json['wageType'] as String,
+      workStartDate: json['workStartDate'] as String,
+      workEndDate: json['workEndDate'] as String,
+      recruitmentCount: (json['recruitmentCount'] as num).toInt(),
+      contactPhone: json['contactPhone'] as String?,
+      contactEmail: json['contactEmail'] as String?,
+    );
+
+Map<String, dynamic> _$JobPostingRequestToJson(JobPostingRequest instance) =>
+    <String, dynamic>{
+      'title': instance.title,
+      if (instance.description case final value?) 'description': value,
+      'farmName': instance.farmName,
+      'address': instance.address,
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'cropType': instance.cropType,
+      'workType': instance.workType,
+      'wages': instance.wages,
+      'wageType': instance.wageType,
+      'workStartDate': instance.workStartDate,
+      'workEndDate': instance.workEndDate,
+      'recruitmentCount': instance.recruitmentCount,
+      if (instance.contactPhone case final value?) 'contactPhone': value,
+      if (instance.contactEmail case final value?) 'contactEmail': value,
+    };

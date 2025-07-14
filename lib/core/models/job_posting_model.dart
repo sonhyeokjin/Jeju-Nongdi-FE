@@ -111,3 +111,46 @@ class JobPostingPageResponse {
       _$JobPostingPageResponseFromJson(json);
   Map<String, dynamic> toJson() => _$JobPostingPageResponseToJson(this);
 }
+
+/// 새로운 일손 모집 공고를 등록할 때 서버로 보내는 데이터 모델
+@JsonSerializable(includeIfNull: false)
+class JobPostingRequest {
+  final String title;
+  final String? description;
+  final String farmName;
+  final String address;
+  final double latitude;
+  final double longitude;
+  final String cropType;
+  final String workType;
+  final int wages;
+  final String wageType;
+  final String workStartDate; // "YYYY-MM-DD" 형식
+  final String workEndDate;   // "YYYY-MM-DD" 형식
+  final int recruitmentCount;
+  final String? contactPhone;
+  final String? contactEmail;
+
+  JobPostingRequest({
+    required this.title,
+    this.description,
+    required this.farmName,
+    required this.address,
+    required this.latitude,
+    required this.longitude,
+    required this.cropType,
+    required this.workType,
+    required this.wages,
+    required this.wageType,
+    required this.workStartDate,
+    required this.workEndDate,
+    required this.recruitmentCount,
+    this.contactPhone,
+    this.contactEmail,
+  });
+
+  factory JobPostingRequest.fromJson(Map<String, dynamic> json) =>
+      _$JobPostingRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$JobPostingRequestToJson(this);
+}
+
