@@ -139,4 +139,31 @@ class JobPostingService {
       }
     }
   }
+
+  Future<ApiResult<JobPostingResponse>> getJobPostingById(int jobPostingId) async {
+    try {
+      Logger.info('ID($jobPostingId)로 공고 상세 정보 조회 시도');
+
+      // GET 요청으로 특정 공고 데이터를 받아옵니다.
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/job-postings/$jobPostingId',
+      );
+
+      if (response.data != null) {
+        // 받아온 데이터를 JobPostingResponse 모델로 변환합니다.
+        final jobPosting = JobPostingResponse.fromJson(response.data!);
+        Logger.info('공고 상세 정보 조회 성공: ${jobPosting.title}');
+        return ApiResult.success(jobPosting);
+      } else {
+        return ApiResult.failure(const UnknownException('공고 상세 정보 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('공고 상세 정보 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('공고 상세 정보 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
 }
