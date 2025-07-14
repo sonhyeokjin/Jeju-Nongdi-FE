@@ -37,6 +37,11 @@ class EnvironmentConfig {
     }
   }
 
+  static String get kakaoJavascriptKey {
+    // 현재는 개발용 키를 모든 환경에 동일하게 적용합니다.
+    return '752d47c1d500b05f00d22e33448215a9';
+  }
+
   /// 디버그 모드 여부
   static bool get isDebug {
     switch (_current) {
