@@ -38,6 +38,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   google_nav_bar: ^5.0.6 # For modern bottom navigation bar
   font_awesome_flutter: ^10.7.0 # For a wider range of icons
+  kpostal: ^1.1.0 # For find address
   # Redux packages for state management
   flutter_redux: ^0.10.0
   redux: ^5.0.0
