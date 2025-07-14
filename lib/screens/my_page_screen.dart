@@ -6,6 +6,7 @@ import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/user/user_actions.dart';
 import 'package:jejunongdi/redux/user/user_state.dart';
 import 'package:jejunongdi/redux/user/user_model.dart';
+import 'package:jejunongdi/screens/my_mentoring_list_screen.dart';
 
 /// 동적인 AppBar와 확장된 레이아웃이 적용된 새로운 마이페이지 화면입니다.
 class MyPageScreen extends StatefulWidget {
@@ -154,6 +155,13 @@ class _MyPageScreenState extends State<MyPageScreen> with TickerProviderStateMix
                         child: _buildAnimatedItem(index: 1, child: _buildMenuGroup(
                           title: '나의 활동',
                           children: [
+                            _buildMenuTile(context, icon: FontAwesomeIcons.chalkboardTeacher, title: '내 멘토링', onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const MyMentoringListScreen(),
+                                ),
+                              );
+                            }),
                             _buildMenuTile(context, icon: FontAwesomeIcons.clipboardList, title: '지원 현황', onTap: () {}),
                             _buildMenuTile(context, icon: FontAwesomeIcons.solidHeart, title: '찜한 일자리', onTap: () {}),
                             _buildMenuTile(context, icon: FontAwesomeIcons.solidStar, title: '내가 받은 후기', onTap: () {}),

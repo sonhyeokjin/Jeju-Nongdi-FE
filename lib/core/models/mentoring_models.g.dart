@@ -65,6 +65,32 @@ Map<String, dynamic> _$MentoringResponseToJson(MentoringResponse instance) =>
       'updatedAt': instance.updatedAt.toIso8601String(),
     };
 
+MentoringRequest _$MentoringRequestFromJson(Map<String, dynamic> json) =>
+    MentoringRequest(
+      title: json['title'] as String,
+      description: json['description'] as String,
+      mentoringType: json['mentoringType'] as String,
+      category: json['category'] as String,
+      experienceLevel: json['experienceLevel'] as String,
+      preferredLocation: json['preferredLocation'] as String?,
+      preferredSchedule: json['preferredSchedule'] as String?,
+      contactPhone: json['contactPhone'] as String?,
+      contactEmail: json['contactEmail'] as String?,
+    );
+
+Map<String, dynamic> _$MentoringRequestToJson(MentoringRequest instance) =>
+    <String, dynamic>{
+      'title': instance.title,
+      'description': instance.description,
+      'mentoringType': instance.mentoringType,
+      'category': instance.category,
+      'experienceLevel': instance.experienceLevel,
+      'preferredLocation': instance.preferredLocation,
+      'preferredSchedule': instance.preferredSchedule,
+      'contactPhone': instance.contactPhone,
+      'contactEmail': instance.contactEmail,
+    };
+
 PageResponse<T> _$PageResponseFromJson<T>(
   Map<String, dynamic> json,
   T Function(Object? json) fromJsonT,

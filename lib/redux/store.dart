@@ -4,11 +4,14 @@ import 'package:redux_logging/redux_logging.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/user/user_middleware.dart';
 import 'package:jejunongdi/redux/user/user_reducer.dart';
+import 'package:jejunongdi/redux/mentoring/mentoring_middleware.dart';
+import 'package:jejunongdi/redux/mentoring/mentoring_reducer.dart';
 
 // Root Reducer - 앱 전체 상태 관리
 AppState appReducer(AppState state, dynamic action) {
   return AppState(
     userState: userStateReducer(state.userState, action),
+    mentoringState: mentoringReducer(state.mentoringState, action),
     // 향후 추가될 다른 상태들
     // farmState: farmStateReducer(state.farmState, action),
     // chatState: chatStateReducer(state.chatState, action),
@@ -29,6 +32,7 @@ Store<AppState> createStore() {
   
   // 추가 미들웨어들을 여기에 추가할 수 있습니다
   middleware.addAll(createUserMiddleware());
+  middleware.addAll(MentoringMiddleware.createMiddleware());
   // middleware.add(apiMiddleware);
   // middleware.add(storageMiddleware);
   // middleware.add(thunkMiddleware);
@@ -63,6 +67,13 @@ class StoreProvider {
   static String? get accessToken => store.state.userState.accessToken;
   static String? get errorMessage => store.state.userState.errorMessage;
   
+  // 멘토링 상태 조회 편의 메서드들
+  static bool get isMentoringLoading => store.state.mentoringState.isLoading;
+  static bool get isMentoringCreateLoading => store.state.mentoringState.isCreateLoading;
+  static String? get mentoringError => store.state.mentoringState.error;
+  static List get mentorings => store.state.mentoringState.mentorings;
+  static List get myMentorings => store.state.mentoringState.myMentorings;
+  
   // 액션 디스패치
   static void dispatch(dynamic action) {
     store.dispatch(action);
@@ -91,5 +102,13 @@ class StoreSubscription {
         .map((state) => state.userState.isAuthenticated)
         .distinct()
         .listen(callback);
+  }
+  
+  // 멘토링 상태 변화만 구독
+  static void subscribeToMentoringState(void Function() callback) {
+    store.onChange
+        .map((state) => state.mentoringState)
+        .distinct()
+        .listen((_) => callback());
   }
 }
