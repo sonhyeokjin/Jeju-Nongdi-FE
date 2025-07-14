@@ -127,7 +127,7 @@ class _MainNavigationState extends State<MainNavigation> {
                       ),
                       GButton(
                         icon: FontAwesomeIcons.clipboardList,
-                        text: '내 활동',
+                        text: '멘토링',
                       ),
                       GButton(
                         icon: FontAwesomeIcons.solidCommentDots,
