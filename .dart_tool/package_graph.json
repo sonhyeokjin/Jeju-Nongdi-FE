@@ -25,13 +25,28 @@
         "redux_logging",
         "retrofit",
         "retrofit_generator",
-        "shared_preferences"
+        "shared_preferences",
+        "url_launcher"
       ],
       "devDependencies": [
         "build_runner",
+        "flutter_launcher_icons",
         "flutter_lints",
         "flutter_test",
         "json_serializable"
+      ]
+    },
+    {
+      "name": "flutter_launcher_icons",
+      "version": "0.13.1",
+      "dependencies": [
+        "args",
+        "checked_yaml",
+        "cli_util",
+        "image",
+        "json_annotation",
+        "path",
+        "yaml"
       ]
     },
     {
@@ -128,6 +143,20 @@
         "test_api",
         "vector_math",
         "vm_service"
+      ]
+    },
+    {
+      "name": "url_launcher",
+      "version": "6.3.2",
+      "dependencies": [
+        "flutter",
+        "url_launcher_android",
+        "url_launcher_ios",
+        "url_launcher_linux",
+        "url_launcher_macos",
+        "url_launcher_platform_interface",
+        "url_launcher_web",
+        "url_launcher_windows"
       ]
     },
     {
@@ -324,6 +353,42 @@
       ]
     },
     {
+      "name": "path",
+      "version": "1.9.1",
+      "dependencies": []
+    },
+    {
+      "name": "image",
+      "version": "4.5.4",
+      "dependencies": [
+        "archive",
+        "meta",
+        "xml"
+      ]
+    },
+    {
+      "name": "cli_util",
+      "version": "0.4.2",
+      "dependencies": [
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "checked_yaml",
+      "version": "2.0.4",
+      "dependencies": [
+        "json_annotation",
+        "source_span",
+        "yaml"
+      ]
+    },
+    {
+      "name": "args",
+      "version": "2.7.0",
+      "dependencies": []
+    },
+    {
       "name": "web_socket_channel",
       "version": "3.0.3",
       "dependencies": [
@@ -412,11 +477,6 @@
         "async",
         "stack_trace"
       ]
-    },
-    {
-      "name": "path",
-      "version": "1.9.1",
-      "dependencies": []
     },
     {
       "name": "package_config",
@@ -642,11 +702,6 @@
       ]
     },
     {
-      "name": "args",
-      "version": "2.7.0",
-      "dependencies": []
-    },
-    {
       "name": "analyzer",
       "version": "7.5.4",
       "dependencies": [
@@ -819,6 +874,64 @@
         "stream_channel",
         "string_scanner",
         "term_glyph"
+      ]
+    },
+    {
+      "name": "url_launcher_windows",
+      "version": "3.1.4",
+      "dependencies": [
+        "flutter",
+        "url_launcher_platform_interface"
+      ]
+    },
+    {
+      "name": "url_launcher_web",
+      "version": "2.4.1",
+      "dependencies": [
+        "flutter",
+        "flutter_web_plugins",
+        "url_launcher_platform_interface",
+        "web"
+      ]
+    },
+    {
+      "name": "url_launcher_platform_interface",
+      "version": "2.3.2",
+      "dependencies": [
+        "flutter",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "url_launcher_macos",
+      "version": "3.2.2",
+      "dependencies": [
+        "flutter",
+        "url_launcher_platform_interface"
+      ]
+    },
+    {
+      "name": "url_launcher_linux",
+      "version": "3.2.1",
+      "dependencies": [
+        "flutter",
+        "url_launcher_platform_interface"
+      ]
+    },
+    {
+      "name": "url_launcher_ios",
+      "version": "6.3.3",
+      "dependencies": [
+        "flutter",
+        "url_launcher_platform_interface"
+      ]
+    },
+    {
+      "name": "url_launcher_android",
+      "version": "6.3.16",
+      "dependencies": [
+        "flutter",
+        "url_launcher_platform_interface"
       ]
     },
     {
@@ -1025,6 +1138,19 @@
       ]
     },
     {
+      "name": "flutter_inappwebview",
+      "version": "6.1.5",
+      "dependencies": [
+        "flutter",
+        "flutter_inappwebview_android",
+        "flutter_inappwebview_ios",
+        "flutter_inappwebview_macos",
+        "flutter_inappwebview_platform_interface",
+        "flutter_inappwebview_web",
+        "flutter_inappwebview_windows"
+      ]
+    },
+    {
       "name": "state_notifier",
       "version": "1.0.0",
       "dependencies": [
@@ -1056,19 +1182,19 @@
       "dependencies": []
     },
     {
+      "name": "xml",
+      "version": "6.5.0",
+      "dependencies": [
+        "collection",
+        "meta",
+        "petitparser"
+      ]
+    },
+    {
       "name": "web_socket",
       "version": "1.0.1",
       "dependencies": [
         "web"
-      ]
-    },
-    {
-      "name": "checked_yaml",
-      "version": "2.0.4",
-      "dependencies": [
-        "json_annotation",
-        "source_span",
-        "yaml"
       ]
     },
     {
@@ -1106,6 +1232,25 @@
     {
       "name": "_fe_analyzer_shared",
       "version": "85.0.0",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "flutter_web_plugins",
+      "version": "0.0.0",
+      "dependencies": [
+        "characters",
+        "collection",
+        "flutter",
+        "material_color_utilities",
+        "meta",
+        "vector_math"
+      ]
+    },
+    {
+      "name": "plugin_platform_interface",
+      "version": "2.1.8",
       "dependencies": [
         "meta"
       ]
@@ -1162,25 +1307,6 @@
       ]
     },
     {
-      "name": "plugin_platform_interface",
-      "version": "2.1.8",
-      "dependencies": [
-        "meta"
-      ]
-    },
-    {
-      "name": "flutter_web_plugins",
-      "version": "0.0.0",
-      "dependencies": [
-        "characters",
-        "collection",
-        "flutter",
-        "material_color_utilities",
-        "meta",
-        "vector_math"
-      ]
-    },
-    {
       "name": "win32",
       "version": "5.14.0",
       "dependencies": [
@@ -1193,46 +1319,19 @@
       "dependencies": []
     },
     {
-      "name": "posix",
-      "version": "6.0.3",
-      "dependencies": [
-        "ffi",
-        "meta",
-        "path"
-      ]
-    },
-    {
-      "name": "platform",
-      "version": "3.1.6",
-      "dependencies": []
-    },
-    {
-      "name": "xdg_directories",
-      "version": "1.1.0",
-      "dependencies": [
-        "meta",
-        "path"
-      ]
-    },
-    {
-      "name": "flutter_inappwebview",
-      "version": "6.1.5",
+      "name": "geocoding_ios",
+      "version": "3.1.0",
       "dependencies": [
         "flutter",
-        "flutter_inappwebview_android",
-        "flutter_inappwebview_ios",
-        "flutter_inappwebview_macos",
-        "flutter_inappwebview_platform_interface",
-        "flutter_inappwebview_web",
-        "flutter_inappwebview_windows"
+        "geocoding_platform_interface"
       ]
     },
     {
-      "name": "flutter_inappwebview_windows",
-      "version": "0.6.0",
+      "name": "geocoding_android",
+      "version": "3.3.1",
       "dependencies": [
         "flutter",
-        "flutter_inappwebview_platform_interface"
+        "geocoding_platform_interface"
       ]
     },
     {
@@ -1242,6 +1341,14 @@
         "flutter",
         "meta",
         "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "flutter_inappwebview_windows",
+      "version": "0.6.0",
+      "dependencies": [
+        "flutter",
+        "flutter_inappwebview_platform_interface"
       ]
     },
     {
@@ -1279,14 +1386,6 @@
       ]
     },
     {
-      "name": "geocoding_ios",
-      "version": "3.1.0",
-      "dependencies": [
-        "flutter",
-        "geocoding_platform_interface"
-      ]
-    },
-    {
       "name": "flutter_inappwebview_platform_interface",
       "version": "1.3.0+1",
       "dependencies": [
@@ -1296,17 +1395,39 @@
       ]
     },
     {
-      "name": "flutter_inappwebview_internal_annotations",
-      "version": "1.2.0",
+      "name": "posix",
+      "version": "6.0.3",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "petitparser",
+      "version": "6.1.0",
+      "dependencies": [
+        "collection",
+        "meta"
+      ]
+    },
+    {
+      "name": "platform",
+      "version": "3.1.6",
       "dependencies": []
     },
     {
-      "name": "geocoding_android",
-      "version": "3.3.1",
+      "name": "xdg_directories",
+      "version": "1.1.0",
       "dependencies": [
-        "flutter",
-        "geocoding_platform_interface"
+        "meta",
+        "path"
       ]
+    },
+    {
+      "name": "flutter_inappwebview_internal_annotations",
+      "version": "1.2.0",
+      "dependencies": []
     }
   ],
   "configVersion": 1
