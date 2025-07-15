@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/idle_farmland_models.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/idle_farmland/idle_farmland_actions.dart';
+import 'package:jejunongdi/screens/idle_farmland_edit_screen.dart'; // [추가]
 import 'package:redux/redux.dart';
 
 class IdleFarmlandDetailScreen extends StatefulWidget {
@@ -18,7 +19,6 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // 화면에 처음 진입 시, Redux에 데이터 로드를 요청합니다.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       StoreProvider.of<AppState>(context, listen: false)
           .dispatch(LoadIdleFarmlandDetailAction(widget.farmlandId));
@@ -29,13 +29,12 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
   Widget build(BuildContext context) {
     return StoreConnector<AppState, _ViewModel>(
       converter: (store) => _ViewModel.fromStore(store),
-      // 상태 변경 감지 (삭제 성공 시 이전 화면으로 이동)
       onWillChange: (previousViewModel, newViewModel) {
         if (previousViewModel?.isDeleting == true && !newViewModel.isDeleting && newViewModel.error == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('농지 정보가 삭제되었습니다.')),
           );
-          Navigator.of(context).pop(true); // true를 반환하여 목록 새로고침 유도
+          Navigator.of(context).pop(true);
         }
       },
       builder: (context, vm) {
@@ -78,7 +77,6 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
     return _buildContent(context, vm);
   }
 
-  // 농지 상세 정보 UI
   Widget _buildContent(BuildContext context, _ViewModel vm) {
     final farmland = vm.farmland!;
     return CustomScrollView(
@@ -93,12 +91,21 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
                 : Container(color: Colors.grey, child: const Icon(Icons.image_not_supported, size: 50)),
           ),
           actions: [
-            // 작성자 본인일 경우에만 수정/삭제 버튼 표시
             if (vm.isAuthor)
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () {
-                  // TODO: 수정 화면으로 이동
+                  // [수정] 수정 화면으로 이동하는 로직
+                  Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (context) => IdleFarmlandEditScreen(initialFarmland: farmland),
+                    ),
+                  ).then((isUpdated) {
+                    // 수정이 성공적으로 완료되고 돌아왔을 때, 상세 정보를 새로고침
+                    if (isUpdated == true) {
+                      vm.loadFarmland(farmland.id);
+                    }
+                  });
                 },
               ),
             if (vm.isAuthor)
@@ -150,7 +157,6 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
     );
   }
 
-  // 삭제 확인 다이얼로그
   void _showDeleteConfirmDialog(BuildContext context, _ViewModel vm) {
     showDialog(
       context: context,
@@ -178,10 +184,9 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
   }
 }
 
-// Redux Store와 위젯을 연결하는 ViewModel
 class _ViewModel {
   final bool isLoading;
-  final bool isDeleting; // 삭제 로딩 상태 추가
+  final bool isDeleting;
   final String? error;
   final IdleFarmlandResponse? farmland;
   final bool isAuthor;
@@ -202,7 +207,7 @@ class _ViewModel {
     final state = store.state;
     return _ViewModel(
       isLoading: state.idleFarmlandState.isLoading,
-      isDeleting: state.idleFarmlandState.isLoading, // 일단 같은 로딩 상태 사용
+      isDeleting: state.idleFarmlandState.isLoading,
       error: state.idleFarmlandState.error,
       farmland: state.idleFarmlandState.selectedFarmland,
       isAuthor: state.userState.user?.id == state.idleFarmlandState.selectedFarmland?.author.id,
