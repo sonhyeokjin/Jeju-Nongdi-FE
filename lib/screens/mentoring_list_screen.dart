@@ -202,7 +202,7 @@ class _MentoringListScreenState extends State<MentoringListScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '제주 농장 멘토링',
+                    '제주 농디 말벗방',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,

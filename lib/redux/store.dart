@@ -6,16 +6,15 @@ import 'package:jejunongdi/redux/user/user_middleware.dart';
 import 'package:jejunongdi/redux/user/user_reducer.dart';
 import 'package:jejunongdi/redux/mentoring/mentoring_middleware.dart';
 import 'package:jejunongdi/redux/mentoring/mentoring_reducer.dart';
+import 'package:jejunongdi/redux/chat/chat_reducer.dart';
+import 'package:jejunongdi/redux/chat/chat_middleware.dart';
 
 // Root Reducer - 앱 전체 상태 관리
 AppState appReducer(AppState state, dynamic action) {
   return AppState(
     userState: userStateReducer(state.userState, action),
     mentoringState: mentoringReducer(state.mentoringState, action),
-    // 향후 추가될 다른 상태들
-    // farmState: farmStateReducer(state.farmState, action),
-    // chatState: chatStateReducer(state.chatState, action),
-    // notificationState: notificationStateReducer(state.notificationState, action),
+    chatState: chatReducer(state.chatState, action),
   );
 }
 
@@ -33,6 +32,7 @@ Store<AppState> createStore() {
   // 추가 미들웨어들을 여기에 추가할 수 있습니다
   middleware.addAll(createUserMiddleware());
   middleware.addAll(MentoringMiddleware.createMiddleware());
+  middleware.addAll(createChatMiddleware());
   // middleware.add(apiMiddleware);
   // middleware.add(storageMiddleware);
   // middleware.add(thunkMiddleware);

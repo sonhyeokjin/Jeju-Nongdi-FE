@@ -9,6 +9,7 @@ import 'package:jejunongdi/screens/login_screen.dart';
 import 'package:jejunongdi/screens/mentoring_list_screen.dart';
 import 'package:jejunongdi/screens/chat_screen.dart';
 import 'package:jejunongdi/screens/my_page_screen.dart';
+import 'package:jejunongdi/screens/chat_list_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -75,7 +76,7 @@ class _MainNavigationState extends State<MainNavigation> {
             children: [
               const HomeScreen(),
               const MentoringListScreen(),
-              const ChatScreen(),
+              const ChatListScreen(),
               // MY농디 탭: 로그인 상태에 따라 다른 화면 표시
               userState.isAuthenticated
                   ? const MyPageScreen()
@@ -123,15 +124,15 @@ class _MainNavigationState extends State<MainNavigation> {
                     tabs: [
                       GButton(
                         icon: FontAwesomeIcons.house,
-                        text: '홈',
+                        text: '밭터오라', // '홈' -> '밭터오라'
                       ),
                       GButton(
                         icon: FontAwesomeIcons.clipboardList,
-                        text: '멘토링',
+                        text: '말벗방', // '멘토링' -> '말벗방'
                       ),
                       GButton(
                         icon: FontAwesomeIcons.solidCommentDots,
-                        text: '채팅',
+                        text: '궁시렁', // '채팅' -> '궁시렁'
                       ),
                       GButton(
                         icon: userState.isAuthenticated
