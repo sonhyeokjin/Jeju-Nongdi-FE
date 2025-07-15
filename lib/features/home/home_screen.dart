@@ -263,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       child: const Text(
-                        '제주 농디🍊',
+                        '밭터오라🍊',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 20,

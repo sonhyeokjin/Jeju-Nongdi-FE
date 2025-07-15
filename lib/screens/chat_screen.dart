@@ -8,7 +8,7 @@ class ChatScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          '채팅',
+          '궁시렁',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.black,

@@ -57,6 +57,7 @@ dependencies:
   retrofit_generator: ^9.2.0
   # New packages for mentoring feature
   url_launcher: ^6.2.5
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
