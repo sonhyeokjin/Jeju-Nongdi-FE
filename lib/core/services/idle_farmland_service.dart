@@ -23,8 +23,7 @@ class IdleFarmlandService {
   }) async {
     try {
       Logger.info('유휴 농지 목록 조회 시도: page=$page');
-      // 페이징 파라미터와 함께 GET 요청
-      final response = await _apiClient.get<Map<String, dynamic>>(
+      final response = await _apiClient.get<dynamic>( // [수정] 어떤 타입이 올지 모르므로 dynamic으로 받습니다.
         '/api/idle-farmlands',
         queryParameters: {
           'page': page,
@@ -33,16 +32,17 @@ class IdleFarmlandService {
         },
       );
 
-      if (response.data != null) {
-        // 기존에 만들어둔 제네릭 PageResponse 모델로 파싱
+      // [수정] null 체크와 함께 타입 체크를 강화합니다.
+      if (response.data is Map<String, dynamic>) {
         final pageResponse = PageResponse<IdleFarmlandResponse>.fromJson(
-          response.data!,
+          response.data,
               (json) => IdleFarmlandResponse.fromJson(json as Map<String, dynamic>),
         );
         Logger.info('유휴 농지 목록 조회 성공: ${pageResponse.content.length}개');
         return ApiResult.success(pageResponse);
       } else {
-        return ApiResult.failure(const UnknownException('유휴 농지 목록 데이터가 없습니다.'));
+        // 응답이 있지만, 예상한 Map 형태가 아닌 경우
+        return ApiResult.failure(const UnknownException('유효하지 않은 응답 데이터입니다.'));
       }
     } catch (e) {
       Logger.error('유휴 농지 목록 조회 실패', error: e);
@@ -90,6 +90,36 @@ class IdleFarmlandService {
       }
     } catch (e) {
       Logger.error('유휴 농지 수정 실패', error: e);
+      return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
+    }
+  }
+
+  // 유휴 농지 생성
+  Future<ApiResult<IdleFarmlandResponse>> createIdleFarmland(IdleFarmlandRequest request) async {
+    try {
+      Logger.info('유휴 농지 생성 시도');
+      final response = await _apiClient.post<dynamic>( // [수정] dynamic으로 받습니다.
+        '/api/idle-farmlands',
+        data: request.toJson(),
+      );
+
+      // [수정] null 체크와 함께 타입 체크를 강화합니다.
+      if (response.data is Map<String, dynamic>) {
+        final newFarmland = IdleFarmlandResponse.fromJson(response.data);
+        Logger.info('유휴 농지 생성 성공: ${newFarmland.address}');
+        return ApiResult.success(newFarmland);
+      } else {
+        // 201 Created 등 성공 코드가 왔지만, body가 비어있는 경우를 성공으로 간주
+        if (response.statusCode! >= 200 && response.statusCode! < 300) {
+          Logger.info('유휴 농지 생성 성공 (응답 본문 없음)');
+          // 성공했지만 반환할 데이터가 없으므로 null을 전달
+          // 미들웨어에서 이 신호를 받고 목록을 새로고침하게 됩니다.
+          return ApiResult.success(null);
+        }
+        return ApiResult.failure(const UnknownException('유효하지 않은 응답 데이터입니다.'));
+      }
+    } catch (e) {
+      Logger.error('유휴 농지 생성 실패', error: e);
       return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
     }
   }

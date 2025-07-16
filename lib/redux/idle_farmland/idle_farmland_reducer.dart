@@ -8,7 +8,29 @@ final idleFarmlandReducer = combineReducers<IdleFarmlandState>([
   TypedReducer<IdleFarmlandState, LoadIdleFarmlandDetailSuccessAction>(_loadDetailSuccess),
   TypedReducer<IdleFarmlandState, UpdateIdleFarmlandSuccessAction>(_updateSuccess),
   TypedReducer<IdleFarmlandState, DeleteIdleFarmlandSuccessAction>(_deleteSuccess),
+  TypedReducer<IdleFarmlandState, LoadIdleFarmlandsAction>(_loadList),
+  TypedReducer<IdleFarmlandState, LoadIdleFarmlandsSuccessAction>(_loadListSuccess),
+
 ]);
+
+// 목록 로딩 시작 시 상태 변경
+IdleFarmlandState _loadList(IdleFarmlandState state, LoadIdleFarmlandsAction action) {
+  return state.copyWith(
+    isLoading: true,
+    farmlands: action.refresh ? [] : state.farmlands,
+  );
+}
+
+// 목록 로딩 성공 시 상태 변경
+IdleFarmlandState _loadListSuccess(IdleFarmlandState state, LoadIdleFarmlandsSuccessAction action) {
+  return state.copyWith(
+    isLoading: false,
+    farmlands: [...state.farmlands, ...action.farmlands],
+    currentPage: action.page,
+    hasMore: action.hasMore,
+  );
+}
+
 
 IdleFarmlandState _setLoading(IdleFarmlandState state, SetIdleFarmlandLoadingAction action) {
   return state.copyWith(isLoading: action.isLoading, clearError: true);

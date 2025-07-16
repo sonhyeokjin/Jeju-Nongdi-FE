@@ -178,10 +178,29 @@ class PageResponse<T> {
   });
 
   factory PageResponse.fromJson(
-    Map<String, dynamic> json,
-    T Function(Object? json) fromJsonT,
-  ) =>
-      _$PageResponseFromJson(json, fromJsonT);
+      Map<String, dynamic> json,
+      T Function(Object? json) fromJsonT,
+      ) {
+    // 서버에서 온 content 리스트가 null일 경우를 대비해 빈 리스트로 초기화합니다.
+    final contentList = json['content'] as List<dynamic>? ?? [];
+
+    // 리스트 내부의 항목 중 null이 아닌 것만 필터링하여 안전하게 변환합니다.
+    final validContent = contentList
+        .where((item) => item != null)
+        .map(fromJsonT)
+        .toList();
+
+    return PageResponse<T>(
+      content: validContent,
+      last: json['last'] as bool? ?? true,
+      totalPages: json['totalPages'] as int? ?? 0,
+      totalElements: json['totalElements'] as int? ?? 0,
+      size: json['size'] as int? ?? 0,
+      number: json['number'] as int? ?? 0,
+      first: json['first'] as bool? ?? true,
+      numberOfElements: json['numberOfElements'] as int? ?? 0,
+    );
+  }
 
   Map<String, dynamic> toJson(Object Function(T value) toJsonT) =>
       _$PageResponseToJson(this, toJsonT);

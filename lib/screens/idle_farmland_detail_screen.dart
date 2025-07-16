@@ -85,7 +85,7 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
           expandedHeight: 250.0,
           pinned: true,
           flexibleSpace: FlexibleSpaceBar(
-            title: Text(farmland.address, style: const TextStyle(shadows: [Shadow(blurRadius: 2)])),
+            title: Text(farmland.title, style: const TextStyle(shadows: [Shadow(blurRadius: 2)])), // [수정] address -> title
             background: farmland.imageUrls != null && farmland.imageUrls!.isNotEmpty
                 ? Image.network(farmland.imageUrls!.first, fit: BoxFit.cover)
                 : Container(color: Colors.grey, child: const Icon(Icons.image_not_supported, size: 50)),
@@ -122,14 +122,37 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // [수정] 모든 필드를 보여주도록 항목 추가
+                  _buildInfoRow(Icons.label_outline, "농지 이름", farmland.farmlandName),
+                  const SizedBox(height: 16),
                   _buildInfoRow(Icons.map_outlined, "주소", farmland.address),
                   const SizedBox(height: 16),
-                  _buildInfoRow(Icons.aspect_ratio, "면적", "${farmland.area} 평"),
+                  _buildInfoRow(Icons.aspect_ratio, "면적", "${farmland.areaSize} 평"),
                   const SizedBox(height: 16),
-                  _buildInfoRow(Icons.person_outline, "소유자", farmland.author.name),
+                  _buildInfoRow(Icons.paid_outlined, "월 임대료", "${farmland.monthlyRent ?? 0} 원"),
                   const SizedBox(height: 16),
-                  _buildInfoRow(Icons.calendar_today_outlined, "등록일", farmland.createdAt.toLocal().toString().substring(0, 10)),
+                  _buildInfoRow(Icons.calendar_today_outlined, "임대 기간", "${farmland.availableStartDate} ~ ${farmland.availableEndDate}"),
+                  const SizedBox(height: 16),
+                  _buildInfoRow(Icons.phone_outlined, "연락처", farmland.contactPhone ?? '없음'),
+                  const SizedBox(height: 16),
+                  _buildInfoRow(Icons.email_outlined, "이메일", farmland.contactEmail ?? '없음'),
+
                   const Divider(height: 40),
+
+                  const Text("편의 시설", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: [
+                      if(farmland.waterSupply == true) _buildAmenityChip("수도 공급"),
+                      if(farmland.electricitySupply == true) _buildAmenityChip("전기 공급"),
+                      if(farmland.farmingToolsIncluded == true) _buildAmenityChip("농기구 포함"),
+                    ],
+                  ),
+
+                  const Divider(height: 40),
+
                   const Text("상세 설명", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   Text(farmland.description, style: const TextStyle(fontSize: 16, height: 1.5)),
@@ -154,6 +177,15 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
         ),
         Expanded(child: Text(value)),
       ],
+    );
+  }
+
+  Widget _buildAmenityChip(String label) {
+    return Chip(
+      avatar: const Icon(Icons.check_circle_outline, color: Colors.green),
+      label: Text(label),
+      backgroundColor: Colors.green.withOpacity(0.1),
+      shape: StadiumBorder(side: BorderSide(color: Colors.green.withOpacity(0.3))),
     );
   }
 

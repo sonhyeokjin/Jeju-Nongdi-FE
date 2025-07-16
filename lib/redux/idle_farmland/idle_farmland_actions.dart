@@ -44,3 +44,26 @@ class DeleteIdleFarmlandSuccessAction {
   final int farmlandId;
   DeleteIdleFarmlandSuccessAction(this.farmlandId);
 }
+
+// --- 목록 조회 관련 액션 ---
+class LoadIdleFarmlandsAction {
+  final bool refresh;
+  LoadIdleFarmlandsAction({this.refresh = false});
+}
+
+class LoadIdleFarmlandsSuccessAction {
+  final List<IdleFarmlandResponse> farmlands;
+  final int page;
+  final bool hasMore;
+  LoadIdleFarmlandsSuccessAction({
+    required this.farmlands,
+    required this.page,
+    required this.hasMore,
+  });
+}
+
+// --- 생성 관련 액션 ---
+class CreateIdleFarmlandAction {
+  final IdleFarmlandRequest request;
+  CreateIdleFarmlandAction(this.request);
+}

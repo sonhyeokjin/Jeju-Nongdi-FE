@@ -1,3 +1,5 @@
+// lib/screens/idle_farmland_create_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/idle_farmland_models.dart';
@@ -5,61 +7,33 @@ import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/idle_farmland/idle_farmland_actions.dart';
 import 'package:redux/redux.dart';
 
-class IdleFarmlandEditScreen extends StatefulWidget {
-  final IdleFarmlandResponse initialFarmland;
-
-  const IdleFarmlandEditScreen({super.key, required this.initialFarmland});
-
+class IdleFarmlandCreateScreen extends StatefulWidget {
+  const IdleFarmlandCreateScreen({super.key});
   @override
-  State<IdleFarmlandEditScreen> createState() => _IdleFarmlandEditScreenState();
+  State<IdleFarmlandCreateScreen> createState() => _IdleFarmlandCreateScreenState();
 }
 
-class _IdleFarmlandEditScreenState extends State<IdleFarmlandEditScreen> {
+class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _farmlandNameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _latitudeController = TextEditingController(text: '33.4996');
+  final _longitudeController = TextEditingController(text: '126.5312');
+  final _areaSizeController = TextEditingController();
+  final _monthlyRentController = TextEditingController();
+  final _startDateController = TextEditingController(text: '2025-07-17');
+  final _endDateController = TextEditingController(text: '2026-07-16');
+  final _contactPhoneController = TextEditingController();
+  final _contactEmailController = TextEditingController();
+  final _soilTypeController = TextEditingController(text: 'VOLCANIC');
+  final _usageTypeController = TextEditingController(text: 'SHORT_TERM_RENTAL');
 
-  // [수정] 모든 필드에 대한 컨트롤러 및 상태 변수 추가
-  late TextEditingController _titleController;
-  late TextEditingController _descriptionController;
-  late TextEditingController _farmlandNameController;
-  late TextEditingController _addressController;
-  late TextEditingController _latitudeController;
-  late TextEditingController _longitudeController;
-  late TextEditingController _areaSizeController;
-  late TextEditingController _monthlyRentController;
-  late TextEditingController _startDateController;
-  late TextEditingController _endDateController;
-  late TextEditingController _contactPhoneController;
-  late TextEditingController _contactEmailController;
-  late TextEditingController _soilTypeController;
-  late TextEditingController _usageTypeController;
+  bool _waterSupply = true;
+  bool _electricitySupply = true;
+  bool _farmingToolsIncluded = true;
 
-  late bool _waterSupply;
-  late bool _electricitySupply;
-  late bool _farmingToolsIncluded;
-
-  @override
-  void initState() {
-    super.initState();
-    // [수정] 전달받은 정보로 모든 텍스트 필드와 상태 변수를 초기화합니다.
-    _titleController = TextEditingController(text: widget.initialFarmland.title);
-    _descriptionController = TextEditingController(text: widget.initialFarmland.description);
-    _farmlandNameController = TextEditingController(text: widget.initialFarmland.farmlandName);
-    _addressController = TextEditingController(text: widget.initialFarmland.address);
-    _latitudeController = TextEditingController(text: widget.initialFarmland.latitude.toString());
-    _longitudeController = TextEditingController(text: widget.initialFarmland.longitude.toString());
-    _areaSizeController = TextEditingController(text: widget.initialFarmland.areaSize.toString());
-    _monthlyRentController = TextEditingController(text: widget.initialFarmland.monthlyRent?.toString() ?? '');
-    _startDateController = TextEditingController(text: widget.initialFarmland.availableStartDate);
-    _endDateController = TextEditingController(text: widget.initialFarmland.availableEndDate);
-    _contactPhoneController = TextEditingController(text: widget.initialFarmland.contactPhone);
-    _contactEmailController = TextEditingController(text: widget.initialFarmland.contactEmail);
-    _soilTypeController = TextEditingController(text: widget.initialFarmland.soilType);
-    _usageTypeController = TextEditingController(text: widget.initialFarmland.usageType);
-
-    _waterSupply = widget.initialFarmland.waterSupply ?? false;
-    _electricitySupply = widget.initialFarmland.electricitySupply ?? false;
-    _farmingToolsIncluded = widget.initialFarmland.farmingToolsIncluded ?? false;
-  }
 
   @override
   void dispose() {
@@ -82,7 +56,6 @@ class _IdleFarmlandEditScreenState extends State<IdleFarmlandEditScreen> {
 
   void _submitForm(Store<AppState> store) {
     if (_formKey.currentState?.validate() ?? false) {
-      // [수정] 모든 필드를 포함하여 요청 객체 생성
       final request = IdleFarmlandRequest(
         title: _titleController.text,
         description: _descriptionController.text,
@@ -102,7 +75,7 @@ class _IdleFarmlandEditScreenState extends State<IdleFarmlandEditScreen> {
         electricitySupply: _electricitySupply,
         farmingToolsIncluded: _farmingToolsIncluded,
       );
-      store.dispatch(UpdateIdleFarmlandAction(widget.initialFarmland.id, request));
+      store.dispatch(CreateIdleFarmlandAction(request));
     }
   }
 
@@ -113,15 +86,15 @@ class _IdleFarmlandEditScreenState extends State<IdleFarmlandEditScreen> {
       onWillChange: (previousViewModel, newViewModel) {
         if (previousViewModel?.isLoading == true && !newViewModel.isLoading && newViewModel.error == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('농지 정보가 수정되었습니다.')),
+            const SnackBar(content: Text('새로운 농지가 등록되었습니다.')),
           );
-          Navigator.of(context).pop(true);
+          Navigator.of(context).pop();
         }
       },
       builder: (context, vm) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('농지 정보 수정'),
+            title: const Text('새 농지 등록'),
             actions: [
               if (vm.isLoading)
                 const Padding(
@@ -131,7 +104,7 @@ class _IdleFarmlandEditScreenState extends State<IdleFarmlandEditScreen> {
               else
                 TextButton(
                   onPressed: () => _submitForm(StoreProvider.of<AppState>(context)),
-                  child: const Text('저장', style: TextStyle(fontSize: 16)),
+                  child: const Text('등록', style: TextStyle(fontSize: 16)),
                 )
             ],
           ),
@@ -142,6 +115,7 @@ class _IdleFarmlandEditScreenState extends State<IdleFarmlandEditScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // [수정] 모든 필드에 대한 입력 UI 추가
                   _buildTextFormField(controller: _titleController, label: '제목'),
                   const SizedBox(height: 20),
                   _buildTextFormField(controller: _farmlandNameController, label: '농지 이름'),
@@ -165,6 +139,7 @@ class _IdleFarmlandEditScreenState extends State<IdleFarmlandEditScreen> {
                   _buildTextFormField(controller: _usageTypeController, label: '사용 목적 (예: SHORT_TERM_RENTAL)'),
                   const SizedBox(height: 20),
 
+                  // [추가] bool 타입 입력을 위한 스위치
                   SwitchListTile(
                     title: const Text('수도 공급'),
                     value: _waterSupply,
@@ -186,7 +161,10 @@ class _IdleFarmlandEditScreenState extends State<IdleFarmlandEditScreen> {
 
                   if (vm.error != null) ...[
                     const SizedBox(height: 20),
-                    Text('오류: ${vm.error}', style: const TextStyle(color: Colors.red, fontSize: 14)),
+                    Text(
+                      '오류: ${vm.error}',
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                    ),
                   ]
                 ],
               ),
