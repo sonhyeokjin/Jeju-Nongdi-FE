@@ -7,6 +7,7 @@ import 'package:jejunongdi/redux/user/user_actions.dart';
 import 'package:jejunongdi/redux/user/user_state.dart';
 import 'package:jejunongdi/redux/user/user_model.dart';
 import 'package:jejunongdi/screens/my_mentoring_list_screen.dart';
+import 'package:jejunongdi/screens/idle_farmland_list_screen.dart';
 
 /// 동적인 AppBar와 확장된 레이아웃이 적용된 새로운 마이페이지 화면입니다.
 class MyPageScreen extends StatefulWidget {
@@ -155,11 +156,17 @@ class _MyPageScreenState extends State<MyPageScreen> with TickerProviderStateMix
                         child: _buildAnimatedItem(index: 1, child: _buildMenuGroup(
                           title: '나의 활동',
                           children: [
-                            _buildMenuTile(context, icon: FontAwesomeIcons.chalkboardTeacher, title: '내 멘토링', onTap: () {
+                            _buildMenuTile(context, icon: FontAwesomeIcons.chalkboardTeacher, title: '내 말벗방', onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (context) => const MyMentoringListScreen(),
                                 ),
+                              );
+                            }),
+                            // [추가] 유휴 농지 목록 메뉴
+                            _buildMenuTile(context, icon: FontAwesomeIcons.tractor, title: '등록된 농지 보기', onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (context) => const IdleFarmlandListScreen()),
                               );
                             }),
                             _buildMenuTile(context, icon: FontAwesomeIcons.clipboardList, title: '지원 현황', onTap: () {}),

@@ -27,16 +27,35 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   double _sheetExtent = 0.3;
 
+  // [추가] 새로운 카드를 위한 상태 변수들
+  Timer? _infoTimer;
+  int _currentInfoIndex = 0;
+  final List<String> _infoMessages = [
+    "제주 당근은 지금이 제철이에요!",
+    "한라봉 농장에서 일손을 구하고 있어요.",
+    "밭터오라에 새로운 농지가 등록되었어요.",
+    "서귀포에서 열리는 감귤 축제에 참여해보세요!",
+  ];
+
   static const NLatLng _initialPosition = NLatLng(33.375, 126.49);
 
   @override
   void initState() {
     super.initState();
+    // [추가] 3초마다 메시지를 변경하는 타이머 설정
+    _infoTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) { // 위젯이 화면에 있을 때만 상태 변경
+        setState(() {
+          _currentInfoIndex = (_currentInfoIndex + 1) % _infoMessages.length;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _infoTimer?.cancel();
     super.dispose();
   }
 
@@ -334,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Positioned(
-              top: 90,
+              top: 130,
               left: 16,
               right: 16,
               child: Card(
@@ -349,6 +368,38 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           '현재 화면에 ${_jobPostings.length}개의 일자리가 있습니다',
                           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // [추가] 돌하르방 정보 카드
+            Positioned(
+              top: 190, // 기존 카드보다 아래에 위치하도록 top 값 조절
+              left: 16,
+              right: 16,
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Text('🗿', style: TextStyle(fontSize: 24)), // 돌하르방 아이콘
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 500),
+                          transitionBuilder: (Widget child, Animation<double> animation) {
+                            return FadeTransition(opacity: animation, child: child);
+                          },
+                          child: Text(
+                            _infoMessages[_currentInfoIndex],
+                            key: ValueKey<int>(_currentInfoIndex), // 키를 변경하여 위젯을 새로 그리도록 함
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
                         ),
                       ),
                     ],

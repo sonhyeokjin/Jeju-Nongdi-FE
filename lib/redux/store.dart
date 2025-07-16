@@ -8,6 +8,8 @@ import 'package:jejunongdi/redux/mentoring/mentoring_middleware.dart';
 import 'package:jejunongdi/redux/mentoring/mentoring_reducer.dart';
 import 'package:jejunongdi/redux/chat/chat_reducer.dart';
 import 'package:jejunongdi/redux/chat/chat_middleware.dart';
+import 'package:jejunongdi/redux/idle_farmland/idle_farmland_reducer.dart';
+import 'package:jejunongdi/redux/idle_farmland/idle_farmland_middleware.dart';
 import 'package:jejunongdi/redux/job_posting/job_posting_reducer.dart';
 import 'package:jejunongdi/redux/job_posting/job_posting_middleware.dart';
 
@@ -17,6 +19,7 @@ AppState appReducer(AppState state, dynamic action) {
     userState: userStateReducer(state.userState, action),
     mentoringState: mentoringReducer(state.mentoringState, action),
     chatState: chatReducer(state.chatState, action),
+    idleFarmlandState: idleFarmlandReducer(state.idleFarmlandState, action),
     jobPostingState: jobPostingReducer(state.jobPostingState, action),
   );
 }
@@ -36,6 +39,7 @@ Store<AppState> createStore() {
   middleware.addAll(createUserMiddleware());
   middleware.addAll(MentoringMiddleware.createMiddleware());
   middleware.addAll(createChatMiddleware());
+  middleware.addAll(createIdleFarmlandMiddleware());
   // middleware.add(apiMiddleware);
   // middleware.add(storageMiddleware);
   // middleware.add(thunkMiddleware);
