@@ -15,7 +15,7 @@ class IdleFarmlandService {
 
   IdleFarmlandService._internal();
 
-  /// [추가] 전체 유휴 농지 목록 조회 (페이징 지원)
+  /// 전체 유휴 농지 목록 조회 (페이징 지원)
   Future<ApiResult<PageResponse<IdleFarmlandResponse>>> getIdleFarmlands({
     int page = 0,
     int size = 20,
@@ -23,7 +23,7 @@ class IdleFarmlandService {
   }) async {
     try {
       Logger.info('유휴 농지 목록 조회 시도: page=$page');
-      final response = await _apiClient.get<dynamic>( // [수정] 어떤 타입이 올지 모르므로 dynamic으로 받습니다.
+      final response = await _apiClient.get<dynamic>(
         '/api/idle-farmlands',
         queryParameters: {
           'page': page,
@@ -32,8 +32,8 @@ class IdleFarmlandService {
         },
       );
 
-      // [수정] null 체크와 함께 타입 체크를 강화합니다.
-      if (response.data is Map<String, dynamic>) {
+      // [수정] null과 타입을 이중으로 확인하여 안정성 강화
+      if (response.data != null && response.data is Map<String, dynamic>) {
         final pageResponse = PageResponse<IdleFarmlandResponse>.fromJson(
           response.data,
               (json) => IdleFarmlandResponse.fromJson(json as Map<String, dynamic>),
@@ -41,8 +41,8 @@ class IdleFarmlandService {
         Logger.info('유휴 농지 목록 조회 성공: ${pageResponse.content.length}개');
         return ApiResult.success(pageResponse);
       } else {
-        // 응답이 있지만, 예상한 Map 형태가 아닌 경우
-        return ApiResult.failure(const UnknownException('유효하지 않은 응답 데이터입니다.'));
+        // 성공 응답이지만 데이터가 비어있거나 형식이 다른 경우
+        return ApiResult.failure(const UnknownException('서버로부터 유효한 목록 데이터를 받지 못했습니다.'));
       }
     } catch (e) {
       Logger.error('유휴 농지 목록 조회 실패', error: e);
@@ -94,17 +94,17 @@ class IdleFarmlandService {
     }
   }
 
-  // 유휴 농지 생성
-  Future<ApiResult<IdleFarmlandResponse>> createIdleFarmland(IdleFarmlandRequest request) async {
+  /// 유휴 농지 생성
+  Future<ApiResult<IdleFarmlandResponse?>> createIdleFarmland(IdleFarmlandRequest request) async {
     try {
       Logger.info('유휴 농지 생성 시도');
-      final response = await _apiClient.post<dynamic>( // [수정] dynamic으로 받습니다.
+      final response = await _apiClient.post<dynamic>(
         '/api/idle-farmlands',
         data: request.toJson(),
       );
 
-      // [수정] null 체크와 함께 타입 체크를 강화합니다.
-      if (response.data is Map<String, dynamic>) {
+      // [수정] null과 타입을 이중으로 확인하여 안정성 강화
+      if (response.data != null && response.data is Map<String, dynamic>) {
         final newFarmland = IdleFarmlandResponse.fromJson(response.data);
         Logger.info('유휴 농지 생성 성공: ${newFarmland.address}');
         return ApiResult.success(newFarmland);
@@ -112,11 +112,9 @@ class IdleFarmlandService {
         // 201 Created 등 성공 코드가 왔지만, body가 비어있는 경우를 성공으로 간주
         if (response.statusCode! >= 200 && response.statusCode! < 300) {
           Logger.info('유휴 농지 생성 성공 (응답 본문 없음)');
-          // 성공했지만 반환할 데이터가 없으므로 null을 전달
-          // 미들웨어에서 이 신호를 받고 목록을 새로고침하게 됩니다.
           return ApiResult.success(null);
         }
-        return ApiResult.failure(const UnknownException('유효하지 않은 응답 데이터입니다.'));
+        return ApiResult.failure(const UnknownException('서버로부터 유효한 생성 응답을 받지 못했습니다.'));
       }
     } catch (e) {
       Logger.error('유휴 농지 생성 실패', error: e);
