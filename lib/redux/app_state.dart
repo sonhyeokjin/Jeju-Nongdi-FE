@@ -3,19 +3,24 @@
 import 'package:jejunongdi/redux/user/user_state.dart';
 import 'package:jejunongdi/redux/mentoring/mentoring_state.dart';
 import 'package:jejunongdi/redux/chat/chat_state.dart';
+
 import 'package:jejunongdi/redux/idle_farmland/idle_farmland_state.dart';
+import 'package:jejunongdi/redux/job_posting/job_posting_state.dart';
 
 class AppState {
   final UserState userState;
   final MentoringState mentoringState;
   final ChatState chatState;
   final IdleFarmlandState idleFarmlandState;
+  final JobPostingState jobPostingState;
+
 
   const AppState({
     required this.userState,
     required this.mentoringState,
     required this.chatState,
     required this.idleFarmlandState,
+    required this.jobPostingState,
   });
 
   factory AppState.initial() {
@@ -24,6 +29,7 @@ class AppState {
       mentoringState: MentoringState.initial(),
       chatState: ChatState.initial(),
       idleFarmlandState: IdleFarmlandState.initial(),
+      jobPostingState: JobPostingState.initial(),
     );
   }
 
@@ -33,12 +39,14 @@ class AppState {
     MentoringState? mentoringState,
     ChatState? chatState,
     IdleFarmlandState? idleFarmlandState,
+    JobPostingState? jobPostingState,
   }) {
     return AppState(
       userState: userState ?? this.userState,
       mentoringState: mentoringState ?? this.mentoringState,
       chatState: chatState ?? this.chatState,
       idleFarmlandState: idleFarmlandState ?? this.idleFarmlandState,
+      jobPostingState: jobPostingState ?? this.jobPostingState,
     );
   }
 

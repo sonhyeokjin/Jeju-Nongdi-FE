@@ -17,6 +17,7 @@ class JobPostingCreateScreen extends StatefulWidget {
 class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();  // Scaffold GlobalKey 추가
   bool _isLoading = false;
 
   // Animation Controllers
@@ -25,20 +26,23 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
   // Form Field Controllers
   final _titleController = TextEditingController();
   final _farmNameController = TextEditingController();
-  final _addressController = TextEditingController();
+  final _addressController = TextEditingController();  // 주소 컨트롤러 추가
   final _wagesController = TextEditingController();
   final _recruitmentCountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _contactPhoneController = TextEditingController();
 
-  // Dropdown & Date & LatLng Values
+  // 주소 관련 변수
+  double _latitude = 33.0;  // 기본값
+  double _longitude = 126.0;  // 기본값
+  String _postCode = '';  // 우편번호
+
+  // Dropdown & Date Values
   String? _cropType;
   String? _workType;
   String? _wageType;
   DateTime? _workStartDate;
   DateTime? _workEndDate;
-  double? _latitude;
-  double? _longitude;
 
   @override
   void initState() {
@@ -67,13 +71,13 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
   }
 
   Future<void> _submitForm() async {
-    if ((_formKey.currentState?.validate() ?? false) && _latitude != null && _longitude != null) {
+    if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
 
       final request = JobPostingRequest(
         title: _titleController.text,
         farmName: _farmNameController.text,
-        address: _addressController.text,
+        address: _addressController.text,  // 직접 TextEditingController에서 가져옴
         wages: int.parse(_wagesController.text),
         recruitmentCount: int.parse(_recruitmentCountController.text),
         description: _descriptionController.text,
@@ -82,8 +86,8 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
         wageType: _wageType!,
         workStartDate: DateFormat('yyyy-MM-dd').format(_workStartDate!),
         workEndDate: DateFormat('yyyy-MM-dd').format(_workEndDate!),
-        latitude: _latitude!,
-        longitude: _longitude!,
+        latitude: _latitude,   // 저장된 위도
+        longitude: _longitude, // 저장된 경도
         contactPhone: _contactPhoneController.text.isNotEmpty
             ? _contactPhoneController.text
             : null,
@@ -107,7 +111,7 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('주소를 포함한 모든 필수 항목을 입력해주세요.'), backgroundColor: Colors.orange),
+        const SnackBar(content: Text('모든 필수 항목을 입력해주세요.'), backgroundColor: Colors.orange),
       );
     }
   }
@@ -135,6 +139,7 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,  // GlobalKey 추가
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
@@ -270,9 +275,9 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 2))],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 2))],
             ),
             child: IconButton(
               icon: const Icon(FontAwesomeIcons.arrowLeft, color: Color(0xFFF2711C), size: 20),
@@ -311,8 +316,8 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 5)),
-                  BoxShadow(color: const Color(0xFFF2711C).withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 3)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 5)),
+                  BoxShadow(color: const Color(0xFFF2711C).withValues(alpha: 0.04), blurRadius: 15, offset: const Offset(0, 3)),
                 ],
               ),
               child: Column(
@@ -337,37 +342,81 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
   }
 
   Widget _buildAddressField() {
-    return TextFormField(
-      controller: _addressController,
-      readOnly: true,
-      decoration: _getStyledInputDecoration('주소', '탭하여 주소 검색', FontAwesomeIcons.mapLocationDot).copyWith(
-        suffixIcon: const Icon(FontAwesomeIcons.magnifyingGlass, size: 14, color: Colors.grey),
-      ),
-      validator: Validators.required,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => KpostalView(
-              kakaoKey: EnvironmentConfig.kakaoJavascriptKey,
-              callback: (Kpostal result) {
-                if (mounted) {
-                  setState(() {
-                    _addressController.text = result.address;
-                    _latitude = result.latitude;
-                    _longitude = result.longitude;
-                  });
-                  print(result);
-                  // 주소 선택 후 명시적으로 KpostalView 페이지 닫기
-                  Navigator.pop(context);
-                }
-              },
-            ),
+    return Row(
+      children: [
+        Expanded(
+          child: TextFormField(
+            controller: _addressController,
+            readOnly: true,
+            decoration: _getStyledInputDecoration('주소', _addressController.text.isEmpty ? '탭하여 주소 검색' : null, FontAwesomeIcons.mapLocationDot),
+            validator: (value) => value == null || value.isEmpty ? '주소를 선택해주세요.' : null,
+            onTap: () => _openKpostalView(),
           ),
-        );
-      },
+        ),
+        const SizedBox(width: 8),
+        ElevatedButton(
+          onPressed: _openKpostalView,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFF2711C),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          child: const Text('주소검색'),
+        ),
+      ],
     );
   }
+
+  void _openKpostalView() {
+    print('=== 주소 검색 시작 ===');
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => KpostalView(
+          title: '주소 검색',
+          useLocalServer: false, // 서버 없이 직접 카카오 API 사용
+          kakaoKey: EnvironmentConfig.kakaoJavascriptKey,
+          callback: (Kpostal result) {
+            print('=== 콜백 함수 실행됨 ===');
+            print('선택된 주소: ${result.address}');
+            print('우편번호: ${result.postCode}');
+            print('위도: ${result.latitude}');
+            print('경도: ${result.longitude}');
+            
+            // 화면 닫기
+            Navigator.of(context).pop();
+            
+            // addPostFrameCallback 사용하여 안전하게 상태 업데이트
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _addressController.text = result.address;
+                  _latitude = result.latitude ?? 33.0;
+                  _longitude = result.longitude ?? 126.0;
+                  _postCode = result.postCode;
+                });
+                
+                // 성공 알림
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('주소 선택 완료: ${result.address}'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            });
+            
+            print('=== 주소 입력 완료 ===');
+          },
+        ),
+      ),
+    );
+  }
+
 
 
   Widget _buildStyledTextField({required TextEditingController controller, required String labelText, String? hintText, required IconData icon, TextInputType? keyboardType, bool obscureText = false, String? Function(String?)? validator}) {
@@ -392,7 +441,7 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
           child: Container(
             margin: const EdgeInsets.fromLTRB(12, 0, 10, 12),
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: const Color(0xFFF2711C).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: const Color(0xFFF2711C).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, size: 18, color: const Color(0xFFF2711C)),
           ),
         ),
@@ -441,7 +490,7 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
       prefixIcon: Container(
         margin: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: const Color(0xFFF2711C).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: const Color(0xFFF2711C).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, size: 18, color: const Color(0xFFF2711C)),
       ),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -463,7 +512,7 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         gradient: const LinearGradient(colors: [Color(0xFFF2711C), Color(0xFFFF8C42)]),
-        boxShadow: [BoxShadow(color: const Color(0xFFF2711C).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: const Color(0xFFF2711C).withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _submitForm,
@@ -518,7 +567,7 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
