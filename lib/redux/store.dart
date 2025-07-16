@@ -8,6 +8,8 @@ import 'package:jejunongdi/redux/mentoring/mentoring_middleware.dart';
 import 'package:jejunongdi/redux/mentoring/mentoring_reducer.dart';
 import 'package:jejunongdi/redux/chat/chat_reducer.dart';
 import 'package:jejunongdi/redux/chat/chat_middleware.dart';
+import 'package:jejunongdi/redux/job_posting/job_posting_reducer.dart';
+import 'package:jejunongdi/redux/job_posting/job_posting_middleware.dart';
 
 // Root Reducer - 앱 전체 상태 관리
 AppState appReducer(AppState state, dynamic action) {
@@ -15,6 +17,7 @@ AppState appReducer(AppState state, dynamic action) {
     userState: userStateReducer(state.userState, action),
     mentoringState: mentoringReducer(state.mentoringState, action),
     chatState: chatReducer(state.chatState, action),
+    jobPostingState: jobPostingReducer(state.jobPostingState, action),
   );
 }
 
@@ -74,6 +77,14 @@ class StoreProvider {
   static List get mentorings => store.state.mentoringState.mentorings;
   static List get myMentorings => store.state.mentoringState.myMentorings;
   
+  // 일자리 공고 상태 조회 편의 메서드들
+  static bool get isJobPostingLoading => store.state.jobPostingState.isLoading;
+  static bool get isJobPostingCreateLoading => store.state.jobPostingState.isCreateLoading;
+  static String? get jobPostingError => store.state.jobPostingState.error;
+  static String? get selectedAddress => store.state.jobPostingState.selectedAddress;
+  static double? get selectedLatitude => store.state.jobPostingState.selectedLatitude;
+  static double? get selectedLongitude => store.state.jobPostingState.selectedLongitude;
+  
   // 액션 디스패치
   static void dispatch(dynamic action) {
     store.dispatch(action);
@@ -110,5 +121,25 @@ class StoreSubscription {
         .map((state) => state.mentoringState)
         .distinct()
         .listen((_) => callback());
+  }
+  
+  // 일자리 공고 상태 변화만 구독
+  static void subscribeToJobPostingState(void Function() callback) {
+    store.onChange
+        .map((state) => state.jobPostingState)
+        .distinct()
+        .listen((_) => callback());
+  }
+  
+  // 주소 선택 상태 변화만 구독
+  static void subscribeToAddressState(void Function(String? address, double? lat, double? lng) callback) {
+    store.onChange
+        .map((state) => state.jobPostingState)
+        .distinct()
+        .listen((jobPostingState) => callback(
+          jobPostingState.selectedAddress,
+          jobPostingState.selectedLatitude,
+          jobPostingState.selectedLongitude,
+        ));
   }
 }
