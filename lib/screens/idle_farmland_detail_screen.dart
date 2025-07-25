@@ -86,8 +86,8 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
           pinned: true,
           flexibleSpace: FlexibleSpaceBar(
             title: Text(farmland.title, style: const TextStyle(shadows: [Shadow(blurRadius: 2)])), // [수정] address -> title
-            background: farmland.imageUrls != null && farmland.imageUrls!.isNotEmpty
-                ? Image.network(farmland.imageUrls!.first, fit: BoxFit.cover)
+            background: farmland.imageUrls.isNotEmpty
+                ? Image.network(farmland.imageUrls.first, fit: BoxFit.cover)
                 : Container(color: Colors.grey, child: const Icon(Icons.image_not_supported, size: 50)),
           ),
           actions: [
@@ -145,9 +145,9 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen> {
                     spacing: 8.0,
                     runSpacing: 8.0,
                     children: [
-                      if(farmland.waterSupply == true) _buildAmenityChip("수도 공급"),
-                      if(farmland.electricitySupply == true) _buildAmenityChip("전기 공급"),
-                      if(farmland.farmingToolsIncluded == true) _buildAmenityChip("농기구 포함"),
+                      if(farmland.waterSupply) _buildAmenityChip("수도 공급"),
+                      if(farmland.electricitySupply) _buildAmenityChip("전기 공급"),
+                      if(farmland.farmingToolsIncluded) _buildAmenityChip("농기구 포함"),
                     ],
                   ),
 
@@ -239,10 +239,12 @@ class _ViewModel {
     final state = store.state;
     return _ViewModel(
       isLoading: state.idleFarmlandState.isLoading,
-      isDeleting: state.idleFarmlandState.isLoading,
+      isDeleting: state.idleFarmlandState.isDeleting,
       error: state.idleFarmlandState.error,
       farmland: state.idleFarmlandState.selectedFarmland,
-      isAuthor: state.userState.user?.id == state.idleFarmlandState.selectedFarmland?.author.id,
+      isAuthor: state.userState.user?.id != null && 
+                state.idleFarmlandState.selectedFarmland?.author?.id != null &&
+                state.userState.user!.id == state.idleFarmlandState.selectedFarmland!.author!.id,
       loadFarmland: (int id) => store.dispatch(LoadIdleFarmlandDetailAction(id)),
       deleteFarmland: (int id) => store.dispatch(DeleteIdleFarmlandAction(id)),
     );
