@@ -176,13 +176,13 @@ class AuthService {
     try {
       Logger.info('로그아웃 시도');
       
-      // 서버에 로그아웃 요청
-      try {
-        await _apiClient.post('/auth/logout');
-      } catch (e) {
-        // 서버 요청 실패해도 로컬에서는 토큰 삭제
-        Logger.warning('서버 로그아웃 요청 실패', error: e);
-      }
+      // 백엔드에 로그아웃 엔드포인트가 없으므로 로컬에서만 처리
+      // TODO: 백엔드에 로그아웃 엔드포인트가 추가되면 서버 요청 추가
+      // try {
+      //   await _apiClient.post('/auth/logout');
+      // } catch (e) {
+      //   Logger.warning('서버 로그아웃 요청 실패', error: e);
+      // }
       
       // 로컬 토큰 및 사용자 정보 삭제
       await _clearAuthData();
@@ -195,40 +195,32 @@ class AuthService {
     }
   }
   
-  // 토큰 갱신
+  // 토큰 갱신 (현재 백엔드에서 refresh token을 지원하지 않으므로 주석 처리)
   Future<ApiResult<user_model.AuthResponse>> refreshToken() async {
     try {
-      Logger.info('토큰 갱신 시도');
+      Logger.info('토큰 갱신 시도 - 현재 백엔드에서 지원하지 않음');
       
-      final refreshToken = await _secureStorage.read(key: 'refresh_token');
-      if (refreshToken == null) {
-        return ApiResult.failure(const UnauthorizedException('리프레시 토큰이 없습니다.'));
+      // 백엔드에서 refresh token을 지원하지 않으므로 현재 사용자 정보로 응답
+      final savedUser = await getSavedUserInfo();
+      if (savedUser == null) {
+        return ApiResult.failure(const UnauthorizedException('저장된 사용자 정보가 없습니다.'));
       }
       
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        '/auth/refresh',
-        data: {
-          'refreshToken': refreshToken,
-        },
+      final accessToken = await _secureStorage.read(key: 'access_token');
+      if (accessToken == null) {
+        return ApiResult.failure(const UnauthorizedException('액세스 토큰이 없습니다.'));
+      }
+      
+      // 임시 응답 생성 (실제로는 서버에서 새 토큰을 받아야 함)
+      final authResponse = user_model.AuthResponse(
+        user: savedUser,
+        accessToken: accessToken,
+        refreshToken: null,
+        expiresIn: 86400,
       );
       
-      if (response.data != null) {
-        final authResponse = user_model.AuthResponse.fromJson(response.data!);
-        
-        // 새 토큰 저장
-        await _saveTokens(
-          accessToken: authResponse.accessToken,
-          refreshToken: authResponse.refreshToken,
-        );
-        
-        // 사용자 정보 업데이트
-        await _saveUserInfo(authResponse.user);
-        
-        Logger.info('토큰 갱신 성공');
-        return ApiResult.success(authResponse);
-      } else {
-        return ApiResult.failure(const UnknownException('토큰 갱신 응답 데이터가 없습니다.'));
-      }
+      Logger.info('토큰 갱신 성공 (캐시된 정보 사용)');
+      return ApiResult.success(authResponse);
     } catch (e) {
       Logger.error('토큰 갱신 실패', error: e);
       
@@ -243,24 +235,22 @@ class AuthService {
     }
   }
   
-  // 현재 사용자 정보 조회
+  // 현재 사용자 정보 조회 (백엔드 API 미지원으로 로컬 정보 반환)
   Future<ApiResult<user_model.User>> getCurrentUser() async {
     try {
       Logger.info('현재 사용자 정보 조회');
       
-      final response = await _apiClient.get<Map<String, dynamic>>('/auth/me');
-      
-      if (response.data != null) {
-        final user = user_model.User.fromJson(response.data!);
-        
-        // 로컬에 사용자 정보 업데이트
-        await _saveUserInfo(user);
-        
-        Logger.info('사용자 정보 조회 성공: ${user.email}');
-        return ApiResult.success(user);
-      } else {
-        return ApiResult.failure(const UnknownException('사용자 정보 응답 데이터가 없습니다.'));
+      // 먼저 로컬에 저장된 사용자 정보 확인
+      final savedUser = await getSavedUserInfo();
+      if (savedUser == null) {
+        return ApiResult.failure(const UnauthorizedException('저장된 사용자 정보가 없습니다.'));
       }
+      
+      // TODO: 백엔드에 /auth/me 엔드포인트가 추가되면 실제 API 호출로 변경
+      // final response = await _apiClient.get<Map<String, dynamic>>('/auth/me');
+      
+      Logger.info('사용자 정보 조회 성공: ${savedUser.email}');
+      return ApiResult.success(savedUser);
     } catch (e) {
       Logger.error('사용자 정보 조회 실패', error: e);
       if (e is ApiException) {
@@ -271,7 +261,9 @@ class AuthService {
     }
   }
   
-  // 비밀번호 변경
+  // 비밀번호 변경 (백엔드 API 미지원)
+  // TODO: 백엔드에 비밀번호 변경 API가 추가되면 활성화
+  /*
   Future<ApiResult<void>> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -295,8 +287,11 @@ class AuthService {
       }
     }
   }
+  */
   
-  // 비밀번호 재설정 요청
+  // 비밀번호 재설정 요청 (백엔드 API 미지원)
+  // TODO: 백엔드에 비밀번호 재설정 API가 추가되면 활성화
+  /*
   Future<ApiResult<void>> requestPasswordReset(String email) async {
     try {
       Logger.info('비밀번호 재설정 요청: $email');
@@ -316,8 +311,11 @@ class AuthService {
       }
     }
   }
+  */
   
-  // 이메일 중복 확인
+  // 이메일 중복 확인 (백엔드 API 미지원)
+  // TODO: 백엔드에 이메일 중복 확인 API가 추가되면 활성화
+  /*
   Future<ApiResult<bool>> checkEmailAvailability(String email) async {
     try {
       Logger.info('이메일 중복 확인: $email');
@@ -340,6 +338,7 @@ class AuthService {
       }
     }
   }
+  */
   
   // 로그인 상태 확인
   Future<bool> isLoggedIn() async {

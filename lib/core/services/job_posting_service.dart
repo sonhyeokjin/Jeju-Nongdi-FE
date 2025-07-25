@@ -195,4 +195,89 @@ class JobPostingService {
       }
     }
   }
+
+  /// 일손 모집 공고를 수정합니다.
+  Future<ApiResult<JobPostingResponse>> updateJobPosting({
+    required int id,
+    required JobPostingRequest request,
+  }) async {
+    try {
+      Logger.info('일손 모집 공고 수정 시도: ID $id');
+
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        '/api/job-postings/$id',
+        data: request.toJson(),
+      );
+
+      if (response.data != null) {
+        final updatedPosting = JobPostingResponse.fromJson(response.data!);
+        Logger.info('공고 수정 성공: ${updatedPosting.title}');
+        return ApiResult.success(updatedPosting);
+      } else {
+        return ApiResult.failure(const UnknownException('공고 수정 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('일손 모집 공고 수정 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('공고 수정 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 일손 모집 공고를 삭제합니다.
+  Future<ApiResult<void>> deleteJobPosting(int id) async {
+    try {
+      Logger.info('일손 모집 공고 삭제 시도: ID $id');
+
+      await _apiClient.delete('/api/job-postings/$id');
+      
+      Logger.info('공고 삭제 성공');
+      return ApiResult.success(null);
+    } catch (e) {
+      Logger.error('일손 모집 공고 삭제 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('공고 삭제 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 일손 모집 공고 상태를 변경합니다. (ACTIVE, CLOSED, CANCELLED)
+  Future<ApiResult<JobPostingResponse>> updateJobPostingStatus({
+    required int id,
+    required String status,
+  }) async {
+    try {
+      Logger.info('일손 모집 공고 상태 변경 시도: ID $id, Status: $status');
+
+      // 유효한 상태값 확인
+      const validStatuses = ['ACTIVE', 'CLOSED', 'CANCELLED'];
+      if (!validStatuses.contains(status.toUpperCase())) {
+        return ApiResult.failure(const BadRequestException('유효하지 않은 상태값입니다. (ACTIVE, CLOSED, CANCELLED 중 하나)'));
+      }
+
+      final response = await _apiClient.patch<Map<String, dynamic>>(
+        '/api/job-postings/$id/status',
+        queryParameters: {'status': status.toUpperCase()},
+      );
+
+      if (response.data != null) {
+        final updatedPosting = JobPostingResponse.fromJson(response.data!);
+        Logger.info('공고 상태 변경 성공: ${updatedPosting.title} -> $status');
+        return ApiResult.success(updatedPosting);
+      } else {
+        return ApiResult.failure(const UnknownException('공고 상태 변경 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('일손 모집 공고 상태 변경 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('공고 상태 변경 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
 }

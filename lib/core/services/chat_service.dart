@@ -1,5 +1,6 @@
 // lib/core/services/chat_service.dart
 
+import 'package:dio/dio.dart';
 import 'package:jejunongdi/core/models/chat_models.dart';
 import 'package:jejunongdi/core/models/mentoring_models.dart'; // PageResponse 재사용
 import 'package:jejunongdi/core/network/api_client.dart';
@@ -138,6 +139,42 @@ class ChatService {
       return ApiResult.success(null);
     } catch (e) {
       Logger.error('채팅방 나가기 실패', error: e);
+      return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
+    }
+  }
+
+  /// 파일과 함께 메시지 전송
+  Future<ApiResult<ChatMessageResponse>> sendMessageWithFile({
+    required String roomId,
+    required String filePath,
+    String? content,
+  }) async {
+    try {
+      Logger.info('파일 메시지 전송 시도: roomId=$roomId, filePath=$filePath');
+      
+      // FormData 생성을 위해 dio 패키지의 FormData와 MultipartFile 사용
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath),
+        if (content != null && content.isNotEmpty) 'content': content,
+      });
+
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/chat/rooms/$roomId/messages/file',
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+        ),
+      );
+
+      if (response.data != null) {
+        final message = ChatMessageResponse.fromJson(response.data!);
+        Logger.info('파일 메시지 전송 성공');
+        return ApiResult.success(message);
+      } else {
+        return ApiResult.failure(const UnknownException('파일 메시지 전송 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('파일 메시지 전송 실패', error: e);
       return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
     }
   }
