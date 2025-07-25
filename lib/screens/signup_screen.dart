@@ -120,7 +120,7 @@ class SignupScreenState extends State<SignupScreen>
         // 회원가입 성공 시 네비게이션
         if (previousState?.userState.user == null && 
             newState.userState.user != null) {
-          Navigator.pop(context);
+          Navigator.pushReplacementNamed(context, '/main');
         }
         
         // 에러 메시지 표시
