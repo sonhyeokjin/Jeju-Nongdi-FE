@@ -243,4 +243,40 @@ class MentoringService {
       }
     }
   }
+
+  // 멘토링 상태 변경 (ACTIVE, MATCHED, CLOSED, CANCELLED, COMPLETED)
+  Future<ApiResult<MentoringResponse>> updateMentoringStatus({
+    required int id,
+    required String status,
+  }) async {
+    try {
+      Logger.info('멘토링 상태 변경 시도 - ID: $id, Status: $status');
+
+      // 유효한 상태값 확인
+      const validStatuses = ['ACTIVE', 'MATCHED', 'CLOSED', 'CANCELLED', 'COMPLETED'];
+      if (!validStatuses.contains(status.toUpperCase())) {
+        return ApiResult.failure(const BadRequestException('유효하지 않은 상태값입니다. (ACTIVE, MATCHED, CLOSED, CANCELLED, COMPLETED 중 하나)'));
+      }
+
+      final response = await _apiClient.patch<Map<String, dynamic>>(
+        '/api/mentorings/$id/status',
+        queryParameters: {'status': status.toUpperCase()},
+      );
+
+      if (response.data != null) {
+        final updatedMentoring = MentoringResponse.fromJson(response.data!);
+        Logger.info('멘토링 상태 변경 성공: ${updatedMentoring.title} -> $status');
+        return ApiResult.success(updatedMentoring);
+      } else {
+        return ApiResult.failure(const UnknownException('멘토링 상태 변경 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('멘토링 상태 변경 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('멘토링 상태 변경 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
 }

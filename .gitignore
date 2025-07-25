@@ -332,6 +332,9 @@ docs/_build/
 # CUSTOM PROJECT FILES (ADD YOUR SPECIFIC IGNORES HERE)
 # ============================================================================
 
+# API Documentation (contains sensitive information)
+api-docs.json
+
 # Add any project-specific files or directories here
 # Example:
 # assets/private/

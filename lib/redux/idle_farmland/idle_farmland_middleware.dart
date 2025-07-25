@@ -10,7 +10,8 @@ List<Middleware<AppState>> createIdleFarmlandMiddleware() {
     TypedMiddleware<AppState, LoadIdleFarmlandDetailAction>(_loadDetail),
     TypedMiddleware<AppState, UpdateIdleFarmlandAction>(_update),
     TypedMiddleware<AppState, DeleteIdleFarmlandAction>(_delete),
-    TypedMiddleware<AppState, CreateIdleFarmlandAction>(_create), // [추가]
+    TypedMiddleware<AppState, CreateIdleFarmlandAction>(_create),
+    TypedMiddleware<AppState, UpdateIdleFarmlandStatusAction>(_updateStatus),
   ];
 }
 
@@ -36,15 +37,13 @@ void _create(Store<AppState> store, CreateIdleFarmlandAction action, NextDispatc
   next(action);
   store.dispatch(SetIdleFarmlandLoadingAction(true));
   final result = await IdleFarmlandService.instance.createIdleFarmland(action.request);
-  result.onSuccess((farmland) { // farmland가 null일 수 있음
-    // [수정] 성공 시, 특정 객체를 추가하는 대신 전체 목록을 새로고침합니다.
-    // 이렇게 하면 방금 등록한 농지가 목록에 자동으로 나타납니다.
+  result.onSuccess((farmland) {
+    // 성공 시 전체 목록을 새로고침하여 새로 생성된 농지를 표시
     store.dispatch(LoadIdleFarmlandsAction(refresh: true));
-
-    // 로딩 상태를 여기서 바로 해제하고, 에러가 있다면 지워줍니다.
     store.dispatch(SetIdleFarmlandLoadingAction(false));
-
+    store.dispatch(ClearIdleFarmlandErrorAction()); // 에러 상태 정리
   }).onFailure((error) {
+    store.dispatch(SetIdleFarmlandLoadingAction(false));
     store.dispatch(SetIdleFarmlandErrorAction(error.message));
   });
 }
@@ -76,11 +75,28 @@ void _update(Store<AppState> store, UpdateIdleFarmlandAction action, NextDispatc
 
 void _delete(Store<AppState> store, DeleteIdleFarmlandAction action, NextDispatcher next) async {
   next(action);
-  store.dispatch(SetIdleFarmlandLoadingAction(true));
+  store.dispatch(SetIdleFarmlandDeletingAction(true));
   final result = await IdleFarmlandService.instance.deleteIdleFarmland(action.farmlandId);
   result.onSuccess((_) {
     store.dispatch(DeleteIdleFarmlandSuccessAction(action.farmlandId));
   }).onFailure((error) {
+    store.dispatch(SetIdleFarmlandDeletingAction(false));
+    store.dispatch(SetIdleFarmlandErrorAction(error.message));
+  });
+}
+
+void _updateStatus(Store<AppState> store, UpdateIdleFarmlandStatusAction action, NextDispatcher next) async {
+  next(action);
+  store.dispatch(SetIdleFarmlandLoadingAction(true));
+  final result = await IdleFarmlandService.instance.updateIdleFarmlandStatus(
+    id: action.farmlandId,
+    status: action.status,
+  );
+  result.onSuccess((farmland) {
+    store.dispatch(UpdateIdleFarmlandStatusSuccessAction(farmland));
+    store.dispatch(SetIdleFarmlandLoadingAction(false));
+  }).onFailure((error) {
+    store.dispatch(SetIdleFarmlandLoadingAction(false));
     store.dispatch(SetIdleFarmlandErrorAction(error.message));
   });
 }

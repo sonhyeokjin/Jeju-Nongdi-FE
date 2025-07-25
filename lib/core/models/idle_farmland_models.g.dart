@@ -22,16 +22,18 @@ IdleFarmlandResponse _$IdleFarmlandResponseFromJson(
   monthlyRent: (json['monthlyRent'] as num?)?.toInt(),
   availableStartDate: json['availableStartDate'] as String,
   availableEndDate: json['availableEndDate'] as String,
-  waterSupply: json['waterSupply'] as bool?,
-  electricitySupply: json['electricitySupply'] as bool?,
-  farmingToolsIncluded: json['farmingToolsIncluded'] as bool?,
+  waterSupply: json['waterSupply'] as bool? ?? false,
+  electricitySupply: json['electricitySupply'] as bool? ?? false,
+  farmingToolsIncluded: json['farmingToolsIncluded'] as bool? ?? false,
   contactPhone: json['contactPhone'] as String?,
   contactEmail: json['contactEmail'] as String?,
   status: json['status'] as String,
   imageUrls: (json['imageUrls'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
-  author: UserResponse.fromJson(json['author'] as Map<String, dynamic>),
+  author: json['author'] == null
+      ? null
+      : UserResponse.fromJson(json['author'] as Map<String, dynamic>),
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
 );
@@ -59,7 +61,7 @@ Map<String, dynamic> _$IdleFarmlandResponseToJson(
   'contactEmail': instance.contactEmail,
   'status': instance.status,
   'imageUrls': instance.imageUrls,
-  'author': instance.author,
+  'author': instance.author?.toJson(),
   'createdAt': instance.createdAt.toIso8601String(),
   'updatedAt': instance.updatedAt.toIso8601String(),
 };
@@ -79,9 +81,9 @@ IdleFarmlandRequest _$IdleFarmlandRequestFromJson(Map<String, dynamic> json) =>
       contactPhone: json['contactPhone'] as String?,
       soilType: json['soilType'] as String,
       usageType: json['usageType'] as String,
-      waterSupply: json['waterSupply'] as bool,
-      electricitySupply: json['electricitySupply'] as bool,
-      farmingToolsIncluded: json['farmingToolsIncluded'] as bool,
+      waterSupply: json['waterSupply'] as bool? ?? false,
+      electricitySupply: json['electricitySupply'] as bool? ?? false,
+      farmingToolsIncluded: json['farmingToolsIncluded'] as bool? ?? false,
       contactEmail: json['contactEmail'] as String?,
     );
 

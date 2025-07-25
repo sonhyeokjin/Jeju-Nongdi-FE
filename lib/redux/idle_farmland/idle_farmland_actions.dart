@@ -6,9 +6,18 @@ class SetIdleFarmlandLoadingAction {
   SetIdleFarmlandLoadingAction(this.isLoading);
 }
 
+class SetIdleFarmlandDeletingAction {
+  final bool isDeleting;
+  SetIdleFarmlandDeletingAction(this.isDeleting);
+}
+
 class SetIdleFarmlandErrorAction {
   final String error;
   SetIdleFarmlandErrorAction(this.error);
+}
+
+class ClearIdleFarmlandErrorAction {
+  ClearIdleFarmlandErrorAction();
 }
 
 // --- 상세 조회 관련 액션 ---
@@ -66,4 +75,16 @@ class LoadIdleFarmlandsSuccessAction {
 class CreateIdleFarmlandAction {
   final IdleFarmlandRequest request;
   CreateIdleFarmlandAction(this.request);
+}
+
+// --- 상태 변경 관련 액션 ---
+class UpdateIdleFarmlandStatusAction {
+  final int farmlandId;
+  final String status;
+  UpdateIdleFarmlandStatusAction(this.farmlandId, this.status);
+}
+
+class UpdateIdleFarmlandStatusSuccessAction {
+  final IdleFarmlandResponse farmland;
+  UpdateIdleFarmlandStatusSuccessAction(this.farmland);
 }
