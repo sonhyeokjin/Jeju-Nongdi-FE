@@ -9,6 +9,7 @@ UserState userReducer(UserState state, dynamic action) {
     return state.copyWith(
       isLoading: action.isLoading,
       authStatus: action.isLoading ? AuthStatus.loading : state.authStatus,
+      errorMessage: null, // 로딩 시작할 때 에러 메시지 클리어
     );
   }
   
@@ -79,16 +80,8 @@ UserState userReducer(UserState state, dynamic action) {
   return state;
 }
 
-// 타입 안전성을 위한 Reducer 생성
-final Reducer<UserState> userStateReducer = combineReducers<UserState>([
-  TypedReducer<UserState, SetUserLoadingAction>(_setUserLoading),
-  TypedReducer<UserState, SetUserErrorAction>(_setUserError),
-  TypedReducer<UserState, ClearUserErrorAction>(_clearUserError),
-  TypedReducer<UserState, LoginSuccessAction>(_loginSuccess),
-  TypedReducer<UserState, LogoutAction>(_logout),
-  TypedReducer<UserState, UpdateUserAction>(_updateUser),
-  TypedReducer<UserState, UpdateTokenAction>(_updateToken),
-]);
+// 메인 userStateReducer를 사용
+final Reducer<UserState> userStateReducer = userReducer;
 
 // 개별 리듀서 함수들 네이밍 확인 필요
 UserState _setUserLoading(UserState state, SetUserLoadingAction action) {
