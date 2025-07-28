@@ -49,7 +49,6 @@ class _MyMentoringListScreenState extends State<MyMentoringListScreen>
   void _loadMyMentorings({bool refresh = false}) {
     final store = StoreProvider.of<AppState>(context);
     store.dispatch(LoadMyMentoringsAction(
-      page: refresh ? 0 : store.state.mentoringState.currentPage + 1,
       refresh: refresh,
     ));
   }

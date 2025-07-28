@@ -46,22 +46,15 @@ class LoadMentoringsFailureAction {
 
 // 내 멘토링 목록 관련
 class LoadMyMentoringsAction {
-  final int page;
-  final int size;
   final bool refresh;
   
-  LoadMyMentoringsAction({
-    this.page = 0,
-    this.size = 20,
-    this.refresh = false,
-  });
+  LoadMyMentoringsAction({this.refresh = false});
 }
 
 class LoadMyMentoringsSuccessAction {
-  final PageResponse<MentoringResponse> pageResponse;
-  final bool refresh;
+  final List<MentoringResponse> mentorings;
   
-  LoadMyMentoringsSuccessAction(this.pageResponse, {this.refresh = false});
+  LoadMyMentoringsSuccessAction(this.mentorings);
 }
 
 class LoadMyMentoringsFailureAction {
@@ -164,6 +157,131 @@ class SetSelectedMentoringAction {
 }
 
 class ClearSelectedMentoringAction {}
+
+// 멘토링 타입별 조회
+class LoadMentoringsByTypeAction {
+  final String mentoringType;
+  LoadMentoringsByTypeAction(this.mentoringType);
+}
+
+class LoadMentoringsByTypeSuccessAction {
+  final List<MentoringResponse> mentorings;
+  LoadMentoringsByTypeSuccessAction(this.mentorings);
+}
+
+class LoadMentoringsByTypeFailureAction {
+  final String error;
+  LoadMentoringsByTypeFailureAction(this.error);
+}
+
+// 카테고리별 조회
+class LoadMentoringsByCategoryAction {
+  final String category;
+  LoadMentoringsByCategoryAction(this.category);
+}
+
+class LoadMentoringsByCategorySuccessAction {
+  final List<MentoringResponse> mentorings;
+  LoadMentoringsByCategorySuccessAction(this.mentorings);
+}
+
+class LoadMentoringsByCategoryFailureAction {
+  final String error;
+  LoadMentoringsByCategoryFailureAction(this.error);
+}
+
+// 멘토링 검색 (다양한 조건)
+class SearchMentoringsAdvancedAction {
+  final String? mentoringType;
+  final String? category;
+  final String? experienceLevel;
+  final String? location;
+  final String? keyword;
+  
+  SearchMentoringsAdvancedAction({
+    this.mentoringType,
+    this.category,
+    this.experienceLevel,
+    this.location,
+    this.keyword,
+  });
+}
+
+class SearchMentoringsAdvancedSuccessAction {
+  final List<MentoringResponse> mentorings;
+  SearchMentoringsAdvancedSuccessAction(this.mentorings);
+}
+
+class SearchMentoringsAdvancedFailureAction {
+  final String error;
+  SearchMentoringsAdvancedFailureAction(this.error);
+}
+
+// 메타데이터 조회 액션들
+class LoadCategoriesAction {}
+
+class LoadCategoriesSuccessAction {
+  final List<String> categories;
+  LoadCategoriesSuccessAction(this.categories);
+}
+
+class LoadCategoriesFailureAction {
+  final String error;
+  LoadCategoriesFailureAction(this.error);
+}
+
+class LoadMentoringTypesAction {}
+
+class LoadMentoringTypesSuccessAction {
+  final List<String> types;
+  LoadMentoringTypesSuccessAction(this.types);
+}
+
+class LoadMentoringTypesFailureAction {
+  final String error;
+  LoadMentoringTypesFailureAction(this.error);
+}
+
+class LoadExperienceLevelsAction {}
+
+class LoadExperienceLevelsSuccessAction {
+  final List<String> levels;
+  LoadExperienceLevelsSuccessAction(this.levels);
+}
+
+class LoadExperienceLevelsFailureAction {
+  final String error;
+  LoadExperienceLevelsFailureAction(this.error);
+}
+
+class LoadMentoringStatusesAction {}
+
+class LoadMentoringStatusesSuccessAction {
+  final List<String> statuses;
+  LoadMentoringStatusesSuccessAction(this.statuses);
+}
+
+class LoadMentoringStatusesFailureAction {
+  final String error;
+  LoadMentoringStatusesFailureAction(this.error);
+}
+
+// 멘토링 상태 변경
+class UpdateMentoringStatusAction {
+  final int id;
+  final String status;
+  UpdateMentoringStatusAction(this.id, this.status);
+}
+
+class UpdateMentoringStatusSuccessAction {
+  final MentoringResponse mentoring;
+  UpdateMentoringStatusSuccessAction(this.mentoring);
+}
+
+class UpdateMentoringStatusFailureAction {
+  final String error;
+  UpdateMentoringStatusFailureAction(this.error);
+}
 
 // 상태 초기화
 class ResetMentoringStateAction {}
