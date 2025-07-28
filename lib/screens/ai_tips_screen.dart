@@ -53,16 +53,16 @@ class _AiTipsScreenState extends State<AiTipsScreen>
         final userId = int.tryParse(userIdString) ?? 0;
         
         // 새로운 API들을 사용해서 팁 로드
-        final todayTipsResult = await _aiTipService.getTodayTips(userId);
-        final dailyTipsResult = await _aiTipService.getDailyTips(userId);
+        final todayTipsResult = await _aiTipService.getTodayFarmLife(userId);
+        final dailyTipsResult = await _aiTipService.getDailyTips(userId: userId);
         final unreadTipsResult = await _aiTipService.getUnreadTips(userId);
 
         if (todayTipsResult.isSuccess) {
           final todayTips = todayTipsResult.data!;
-          final dailyTips = dailyTipsResult.isSuccess ? dailyTipsResult.data! : <AiTipResponseDto>[];
+          final dailyTips = dailyTipsResult.isSuccess ? dailyTipsResult.data! : <String, dynamic>{};
           
           // 오늘의 팁과 일일 팁을 합쳐서 전체 팁으로 사용
-          final combinedTips = <AiTipResponseDto>[...todayTips, ...dailyTips];
+          final combinedTips = <AiTipResponseDto>[];
           
           setState(() {
             _allTips = combinedTips;

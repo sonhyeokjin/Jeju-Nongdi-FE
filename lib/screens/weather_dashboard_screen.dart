@@ -18,7 +18,7 @@ class _WeatherDashboardScreenState extends State<WeatherDashboardScreen>
   final WeatherService _weatherService = WeatherService.instance;
   
   WeatherInfo? _jejuWeather;
-  List<FarmWorkWeather> _farmworkRecommendations = [];
+  String? _farmworkRecommendations;
   String? _weatherSummary;
   String? _weatherAdvice;
   
@@ -404,127 +404,70 @@ class _WeatherDashboardScreenState extends State<WeatherDashboardScreen>
     return RefreshIndicator(
       onRefresh: _loadWeatherData,
       color: const Color(0xFFF2711C),
-      child: _farmworkRecommendations.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    FontAwesomeIcons.tractor,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      FontAwesomeIcons.tractor,
+                      color: Color(0xFFF2711C),
+                      size: 24,
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      '농작업 권장사항',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (_farmworkRecommendations != null) ...[
                   Text(
-                    '농작업 권장사항을 불러오는 중입니다...',
-                    style: TextStyle(
+                    _farmworkRecommendations!,
+                    style: const TextStyle(
                       fontSize: 16,
-                      color: Colors.grey,
+                      color: Color(0xFF333333),
+                      height: 1.5,
                     ),
                   ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _farmworkRecommendations.length,
-              itemBuilder: (context, index) {
-                final recommendation = _farmworkRecommendations[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: recommendation.isRecommended
-                          ? Colors.green
-                          : Colors.red.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
+                ] else ...[
+                  const Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              recommendation.isRecommended
-                                  ? FontAwesomeIcons.circleCheck
-                                  : FontAwesomeIcons.circleXmark,
-                              color: recommendation.isRecommended
-                                  ? Colors.green
-                                  : Colors.red,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              recommendation.workType,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF333333),
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: recommendation.isRecommended
-                                    ? Colors.green.withOpacity(0.1)
-                                    : Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                recommendation.isRecommended ? '권장' : '비권장',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: recommendation.isRecommended
-                                      ? Colors.green
-                                      : Colors.red,
-                                ),
-                              ),
-                            ),
-                          ],
+                        CircularProgressIndicator(
+                          color: Color(0xFFF2711C),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 16),
                         Text(
-                          recommendation.recommendation,
+                          '농작업 권장사항을 불러오는 중입니다...',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
-                            height: 1.4,
+                            color: Colors.grey,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              FontAwesomeIcons.calendar,
-                              size: 12,
-                              color: Colors.grey[500],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatDate(recommendation.date),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
                   ),
-                );
-              },
+                ],
+              ],
             ),
+          ),
+        ),
+      ),
     );
   }
 

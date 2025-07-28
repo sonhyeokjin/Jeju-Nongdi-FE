@@ -119,20 +119,17 @@ class WeatherService {
   }
 
   /// 농작업별 날씨 권장사항을 조회합니다.
-  Future<ApiResult<List<FarmWorkWeather>>> getFarmWorkWeather() async {
+  Future<ApiResult<String>> getFarmWorkWeather() async {
     try {
       Logger.info('농작업별 날씨 권장사항 조회 시도');
       
-      final response = await _apiClient.get<List<dynamic>>(
+      final response = await _apiClient.get<String>(
         '/api/v1/external/weather/farm-work',
       );
       
       if (response.data != null) {
-        final recommendations = response.data!
-            .map((json) => FarmWorkWeather.fromJson(json as Map<String, dynamic>))
-            .toList();
-        Logger.info('농작업별 날씨 권장사항 조회 성공: ${recommendations.length}개');
-        return ApiResult.success(recommendations);
+        Logger.info('농작업별 날씨 권장사항 조회 성공');
+        return ApiResult.success(response.data!);
       } else {
         return ApiResult.failure(const UnknownException('농작업 날씨 권장사항 조회 응답이 없습니다.'));
       }
@@ -142,6 +139,31 @@ class WeatherService {
         return ApiResult.failure(e);
       } else {
         return ApiResult.failure(UnknownException('농작업 날씨 권장사항 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 모든 외부 API를 테스트합니다.
+  Future<ApiResult<String>> testAllApis(int userId) async {
+    try {
+      Logger.info('전체 API 테스트 시도 - userId: $userId');
+      
+      final response = await _apiClient.get<String>(
+        '/api/v1/external/test/all/$userId',
+      );
+      
+      if (response.data != null) {
+        Logger.info('전체 API 테스트 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('전체 API 테스트 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('전체 API 테스트 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('전체 API 테스트 중 오류가 발생했습니다: $e'));
       }
     }
   }
