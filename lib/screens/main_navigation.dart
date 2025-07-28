@@ -11,6 +11,7 @@ import 'package:jejunongdi/screens/chat_screen.dart';
 import 'package:jejunongdi/screens/my_page_screen.dart';
 import 'package:jejunongdi/screens/chat_list_screen.dart';
 import 'package:jejunongdi/screens/idle_farmland_list_screen.dart';
+import 'package:jejunongdi/screens/ai_tips_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});

@@ -197,4 +197,131 @@ class UserPreferenceService {
     Logger.info('설정 유효성 검사 통과');
     return true;
   }
+
+  /// 농업 유형 목록을 조회합니다.
+  Future<ApiResult<List<String>>> getFarmingTypes() async {
+    try {
+      Logger.info('농업 유형 목록 조회 시도');
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/v1/preferences/farming-types',
+      );
+      
+      if (response.data != null) {
+        final farmingTypes = response.data!.cast<String>();
+        Logger.info('농업 유형 목록 조회 성공: ${farmingTypes.length}개');
+        return ApiResult.success(farmingTypes);
+      } else {
+        return ApiResult.failure(const UnknownException('농업 유형 목록 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('농업 유형 목록 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('농업 유형 목록 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 위치별 설정을 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getLocationSettings(String location) async {
+    try {
+      Logger.info('위치별 설정 조회 시도 - location: $location');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/preferences/location/$location',
+      );
+      
+      if (response.data != null) {
+        Logger.info('위치별 설정 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('위치별 설정 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('위치별 설정 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('위치별 설정 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 작물별 설정을 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getCropSettings(String cropName) async {
+    try {
+      Logger.info('작물별 설정 조회 시도 - cropName: $cropName');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/preferences/crop/$cropName',
+      );
+      
+      if (response.data != null) {
+        Logger.info('작물별 설정 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('작물별 설정 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('작물별 설정 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('작물별 설정 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 알림 유형별 설정을 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getNotificationSettings(String type) async {
+    try {
+      Logger.info('알림 설정 조회 시도 - type: $type');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/preferences/notification/$type',
+      );
+      
+      if (response.data != null) {
+        Logger.info('알림 설정 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('알림 설정 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('알림 설정 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('알림 설정 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 설정 유효성을 서버에서 검증합니다.
+  Future<ApiResult<bool>> validatePreferenceOnServer(UserPreferenceDto preference) async {
+    try {
+      Logger.info('서버 설정 유효성 검증 시도');
+      
+      final response = await _apiClient.post<bool>(
+        '/api/v1/preferences/validation',
+        data: preference.toJson(),
+      );
+      
+      if (response.data != null) {
+        Logger.info('서버 설정 유효성 검증 완료: ${response.data}');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('설정 유효성 검증 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('서버 설정 유효성 검증 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('설정 유효성 검증 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
 }
