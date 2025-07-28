@@ -12,12 +12,17 @@ import 'package:jejunongdi/screens/signup_screen.dart';
 import 'package:jejunongdi/core/config/environment.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 환경 감지 및 설정
   _detectAndSetEnvironment();
+
+  // 한국어 로케일 데이터 초기화
+  await initializeDateFormatting('ko_KR', null);
+  print('✅ 한국어 로케일 초기화 완료');
 
   // Redux Store 초기화
   redux_store.initializeStore();

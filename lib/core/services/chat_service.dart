@@ -102,15 +102,33 @@ class ChatService {
     required ChatRoomCreateRequest request,
   }) async {
     try {
-      Logger.info('채팅방 생성 시도: otherUserId=${request.otherUserId}');
+      Logger.info('채팅방 생성 시도: chatType=${request.chatType}, participantId=${request.participantId}, referenceId=${request.referenceId}');
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/api/chat/rooms',
         data: request.toJson(),
       );
+      
+      Logger.debug('채팅방 생성 원본 응답: ${response.data}');
+      
       if (response.data != null) {
-        final chatRoom = ChatRoomResponse.fromJson(response.data!);
-        Logger.info('채팅방 생성 성공: roomId=${chatRoom.roomId}');
-        return ApiResult.success(chatRoom);
+        try {
+          // 응답 데이터의 각 필드를 개별적으로 체크
+          final responseData = response.data!;
+          final roomId = responseData['roomId'];
+          final roomName = responseData['roomName'];
+          final unreadCount = responseData['unreadCount'];
+          
+          Logger.debug('파싱할 데이터 - roomId: $roomId, roomName: $roomName, unreadCount: $unreadCount');
+          
+          final chatRoom = ChatRoomResponse.fromJson(responseData);
+          Logger.info('채팅방 생성 성공: roomId=${chatRoom.roomId}');
+          return ApiResult.success(chatRoom);
+        } catch (e) {
+          Logger.error('채팅방 응답 파싱 실패', error: e);
+          Logger.debug('응답 데이터 타입: ${response.data.runtimeType}');
+          Logger.debug('응답 데이터 내용: ${response.data}');
+          return ApiResult.failure(UnknownException('채팅방 응답 데이터 파싱에 실패했습니다: ${e.toString()}'));
+        }
       } else {
         return ApiResult.failure(const UnknownException('채팅방 생성 응답이 없습니다.'));
       }
@@ -175,6 +193,81 @@ class ChatService {
       }
     } catch (e) {
       Logger.error('파일 메시지 전송 실패', error: e);
+      return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
+    }
+  }
+
+  /// 채팅방의 메시지를 읽음 처리
+  Future<ApiResult<void>> markMessagesAsRead({required String roomId}) async {
+    try {
+      Logger.info('메시지 읽음 처리 시도: roomId=$roomId');
+      
+      await _apiClient.patch('/api/chat/rooms/$roomId/read');
+      
+      Logger.info('메시지 읽음 처리 성공: roomId=$roomId');
+      return ApiResult.success(null);
+    } catch (e) {
+      Logger.error('메시지 읽음 처리 실패', error: e);
+      return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
+    }
+  }
+
+  /// 채팅방 검색
+  Future<ApiResult<List<ChatRoomResponse>>> searchChatRooms({
+    required String query,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      Logger.info('채팅방 검색 시도: query=$query');
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/chat/rooms/search',
+        queryParameters: {'query': query, 'page': page, 'size': size},
+      );
+
+      if (response.data != null) {
+        final List<dynamic> chatRoomsData = response.data!['content'] ?? [];
+        final chatRooms = chatRoomsData
+            .map((item) => ChatRoomResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        Logger.info('채팅방 검색 성공: ${chatRooms.length}개');
+        return ApiResult.success(chatRooms);
+      } else {
+        return ApiResult.failure(const UnknownException('채팅방 검색 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('채팅방 검색 실패', error: e);
+      return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
+    }
+  }
+
+  /// 타입별 채팅방 조회
+  Future<ApiResult<List<ChatRoomResponse>>> getChatRoomsByType({
+    required String chatType,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      Logger.info('타입별 채팅방 조회 시도: chatType=$chatType');
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/chat/rooms/types/$chatType',
+        queryParameters: {'page': page, 'size': size},
+      );
+
+      if (response.data != null) {
+        final List<dynamic> chatRoomsData = response.data!['content'] ?? [];
+        final chatRooms = chatRoomsData
+            .map((item) => ChatRoomResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        Logger.info('타입별 채팅방 조회 성공: ${chatRooms.length}개');
+        return ApiResult.success(chatRooms);
+      } else {
+        return ApiResult.failure(const UnknownException('타입별 채팅방 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('타입별 채팅방 조회 실패', error: e);
       return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
     }
   }

@@ -66,10 +66,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           tooltip: '새 대화',
                           color: const Color(0xFFF2711C),
                           onPressed: () {
-                            // TODO: 실제로는 사용자 검색 화면으로 이동해야 함
-                            // 임시로 사용자 ID 2와 채팅 시작
-                            StoreProvider.of<AppState>(context, listen: false)
-                                .dispatch(CreateChatRoomAction(2));
+                            final store = StoreProvider.of<AppState>(context, listen: false);
+                            // 멘토링 기반 채팅을 생성해보기 (멘토링 데이터의 첫 번째 항목 활용)
+                            final mentorings = store.state.mentoringState.mentorings;
+                            if (mentorings.isNotEmpty) {
+                              final firstMentoring = mentorings.first;
+                              store.dispatch(CreateChatRoomAction(
+                                chatType: "MENTORING",
+                                participantId: firstMentoring.author.id,
+                                referenceId: firstMentoring.id,
+                                initialMessage: "${firstMentoring.title} 멘토링 관련해서 문의드립니다.",
+                              ));
+                            } else {
+                              // 멘토링 데이터가 없으면 일반 채팅으로 다른 ID 시도
+                              store.dispatch(CreateChatRoomAction(
+                                chatType: "GENERAL",
+                                participantId: 3, // 다른 ID로 시도
+                                referenceId: 1,
+                                initialMessage: "안녕하세요!",
+                              ));
+                            }
                           },
                         ),
                       ),
@@ -178,7 +194,7 @@ class _ChatRoomTile extends StatelessWidget {
             : null,
       ),
       title: Text(
-        chatRoom.roomName,
+        chatRoom.roomName ?? '이름 없는 채팅방',
         style: const TextStyle(fontWeight: FontWeight.bold),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -222,7 +238,7 @@ class _ChatRoomTile extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => ChatRoomScreen(
               roomId: chatRoom.roomId,
-              roomName: chatRoom.roomName,
+              roomName: chatRoom.roomName ?? '이름 없는 채팅방',
             ),
           ),
         );

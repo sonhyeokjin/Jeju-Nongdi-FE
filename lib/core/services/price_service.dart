@@ -140,28 +140,27 @@ class PriceService {
     }
   }
 
-  /// 특정 작물의 가격 트렌드를 조회합니다.
-  Future<ApiResult<PriceTrend>> getPriceTrend(String cropName) async {
+  /// 특정 작물의 가격 동향 분석을 조회합니다.
+  Future<ApiResult<String>> getPriceTrend(String cropName) async {
     try {
-      Logger.info('가격 트렌드 조회 시도 - cropName: $cropName');
+      Logger.info('가격 동향 분석 조회 시도 - cropName: $cropName');
       
-      final response = await _apiClient.get<Map<String, dynamic>>(
+      final response = await _apiClient.get<String>(
         '/api/v1/external/price/trend/$cropName',
       );
       
       if (response.data != null) {
-        final trend = PriceTrend.fromJson(response.data!);
-        Logger.info('가격 트렌드 조회 성공: ${trend.cropName} - ${trend.priceHistory.length}개 데이터');
-        return ApiResult.success(trend);
+        Logger.info('가격 동향 분석 조회 성공');
+        return ApiResult.success(response.data!);
       } else {
-        return ApiResult.failure(const UnknownException('가격 트렌드 조회 응답이 없습니다.'));
+        return ApiResult.failure(const UnknownException('가격 동향 분석 조회 응답이 없습니다.'));
       }
     } catch (e) {
-      Logger.error('가격 트렌드 조회 실패', error: e);
+      Logger.error('가격 동향 분석 조회 실패', error: e);
       if (e is ApiException) {
         return ApiResult.failure(e);
       } else {
-        return ApiResult.failure(UnknownException('가격 트렌드 조회 중 오류가 발생했습니다: $e'));
+        return ApiResult.failure(UnknownException('가격 동향 분석 조회 중 오류가 발생했습니다: $e'));
       }
     }
   }

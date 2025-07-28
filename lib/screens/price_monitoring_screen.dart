@@ -17,7 +17,7 @@ class _PriceMonitoringScreenState extends State<PriceMonitoringScreen>
   
   List<JejuSpecialty> _jejuSpecialties = [];
   final Map<String, CropPrice> _watchedCrops = {};
-  final Map<String, PriceTrend> _priceTrends = {};
+  final Map<String, String> _priceTrends = {};
   
   bool _isLoading = false;
   String? _errorMessage;
@@ -427,7 +427,7 @@ class _PriceMonitoringScreenState extends State<PriceMonitoringScreen>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            trend.analysis,
+                            trend,
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[600],

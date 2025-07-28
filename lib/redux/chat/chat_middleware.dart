@@ -15,6 +15,10 @@ List<Middleware<AppState>> createChatMiddleware() {
     TypedMiddleware<AppState, LoadChatMessagesAction>(_loadChatMessages(chatService)),
     TypedMiddleware<AppState, SendMessageAction>(_sendMessage(chatService)),
     TypedMiddleware<AppState, CreateChatRoomAction>(_createChatRoom(chatService)),
+    TypedMiddleware<AppState, MarkMessagesAsReadAction>(_markMessagesAsRead(chatService)),
+    TypedMiddleware<AppState, EnterChatRoomAction>(_enterChatRoom(chatService)),
+    TypedMiddleware<AppState, LeaveChatRoomAction>(_leaveChatRoom(chatService)),
+    TypedMiddleware<AppState, SendFileMessageAction>(_sendFileMessage(chatService)),
   ];
 }
 
@@ -78,12 +82,75 @@ _createChatRoom(ChatService service) {
   return (store, action, next) async {
     next(action);
     final result = await service.createChatRoom(
-      request: ChatRoomCreateRequest(otherUserId: action.otherUserId),
+      request: ChatRoomCreateRequest(
+        chatType: action.chatType,
+        participantId: action.participantId,
+        referenceId: action.referenceId,
+        initialMessage: action.initialMessage,
+      ),
     );
     result.onSuccess((newRoom) {
       store.dispatch(CreateChatRoomSuccessAction(newRoom));
     }).onFailure((error) {
       store.dispatch(SetChatErrorAction(error.message));
+    });
+  };
+}
+
+void Function(Store<AppState> store, MarkMessagesAsReadAction action, NextDispatcher next)
+_markMessagesAsRead(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    final result = await service.markMessagesAsRead(roomId: action.roomId);
+    result.onSuccess((_) {
+      store.dispatch(MarkMessagesAsReadSuccessAction(action.roomId));
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('메시지 읽음 처리 실패: ${error.message}'));
+    });
+  };
+}
+
+void Function(Store<AppState> store, EnterChatRoomAction action, NextDispatcher next)
+_enterChatRoom(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    final result = await service.enterChatRoom(roomId: action.roomId);
+    result.onSuccess((_) {
+      // 채팅방 입장 후 메시지 읽음 처리
+      store.dispatch(MarkMessagesAsReadAction(action.roomId));
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('채팅방 입장 실패: ${error.message}'));
+    });
+  };
+}
+
+void Function(Store<AppState> store, LeaveChatRoomAction action, NextDispatcher next)
+_leaveChatRoom(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    final result = await service.leaveChatRoom(roomId: action.roomId);
+    result.onSuccess((_) {
+      // 채팅방 나가기 성공 시 채팅방 목록 새로고침
+      store.dispatch(LoadChatRoomsAction());
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('채팅방 나가기 실패: ${error.message}'));
+    });
+  };
+}
+
+void Function(Store<AppState> store, SendFileMessageAction action, NextDispatcher next)
+_sendFileMessage(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    final result = await service.sendMessageWithFile(
+      roomId: action.roomId,
+      filePath: action.filePath,
+      content: action.content,
+    );
+    result.onSuccess((message) {
+      store.dispatch(ReceiveMessageAction(message));
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('파일 메시지 전송 실패: ${error.message}'));
     });
   };
 }
