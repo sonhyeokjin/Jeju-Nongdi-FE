@@ -86,24 +86,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _generateMapImageUrl() {
     if (!kIsWeb) return;
 
-    // 마커 오버레이를 위한 파라미터 생성
-    String markersParam = '';
-    if (_jobPostings.isNotEmpty) {
-      List<String> markerStrings = [];
-      for (int i = 0; i < math.min(_jobPostings.length, 50); i++) {
-        final job = _jobPostings[i];
-        markerStrings.add('${job.longitude},${job.latitude}');
-      }
-      if (markerStrings.isNotEmpty) {
-        markersParam = '&markers=${markerStrings.join('|')}';
-      }
-    }
-
     _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?'
         'w=400&h=400'
         '&center=$_currentLng,$_currentLat'
         '&level=$_currentZoom'
-        '$markersParam'
         '&X-NCP-APIGW-API-KEY-ID=$_naverApiKey';
 
     Logger.info('지도 이미지 URL 생성: $_mapImageUrl');
