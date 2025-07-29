@@ -27,10 +27,22 @@ class AuthInterceptor extends Interceptor {
       '/api/auth/signup',
       '/auth/refresh',
       '/auth/forgot-password',
+      // 외부 API 엔드포인트들
+      '/api/v1/external/weather/summary',
+      '/api/v1/external/weather/jeju',
+      '/api/v1/external/weather/farm-work',
+      '/api/v1/external/test/all',
+      '/api/v1/external/ai/weather-advice',
+      '/api/v1/external/price',
     ];
     
     final isPublicEndpoint = publicEndpoints.any((endpoint) => 
-        options.path.contains(endpoint));
+        options.path.startsWith(endpoint)) ||
+        // 사용자별 외부 API 엔드포인트들 (userId 파라미터 포함)
+        options.path.startsWith('/api/v1/external/ai/weather-advice/') ||
+        options.path.startsWith('/api/v1/external/test/all/') ||
+        // 전체 외부 API 패턴 매칭
+        options.path.startsWith('/api/v1/external/');
     
     if (!isPublicEndpoint) {
       final token = await _secureStorage.read(key: 'access_token');

@@ -11,10 +11,7 @@ import 'package:jejunongdi/screens/job_list_screen.dart';
 import 'package:jejunongdi/screens/login_screen.dart';
 import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
 import 'package:jejunongdi/screens/job_posting_create_screen.dart';
-import 'package:jejunongdi/screens/ai_tips_screen.dart';
-import 'package:jejunongdi/screens/weather_dashboard_screen.dart';
-import 'package:jejunongdi/screens/price_monitoring_screen.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:jejunongdi/screens/ai_assistant_screen.dart';
 import 'dart:math' as math;
 
 class HomeScreen extends StatefulWidget {
@@ -39,15 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _initialLng = 126.49;
   static const int _initialZoom = 11;
 
-  // [추가] 새로운 카드를 위한 상태 변수들
-  Timer? _infoTimer;
-  int _currentInfoIndex = 0;
-  final List<String> _infoMessages = [
-    "제주 당근은 지금이 제철이에요!",
-    "한라봉 농장에서 일손을 구하고 있어요.",
-    "밭터오라에 새로운 농지가 등록되었어요!",
-    "서귀포에서 열리는 감귤 축제에 참여해보세요!",
-  ];
 
   static const NLatLng _initialPosition = NLatLng(_initialLat, _initialLng);
 
@@ -55,21 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadJobPostingsForCurrentView();
-
-    // [추가] 3초마다 메시지를 변경하는 타이머 설정
-    _infoTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) {
-        setState(() {
-          _currentInfoIndex = (_currentInfoIndex + 1) % _infoMessages.length;
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _infoTimer?.cancel();
     super.dispose();
   }
 
@@ -305,27 +283,49 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          )
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Image.asset(
-                          'lib/assets/images/dol_hareubang_emti.png',
-                          height: 32,
-                          width: 32,
-                          fit: BoxFit.contain,
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _navigateToAiAssistant,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Image.asset(
+                                'lib/assets/images/dol_hareubang_emti.png',
+                                height: 32,
+                                width: 32,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        CustomPaint(
+                          painter: SpeechBubblePainter(),
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+                            child: const Text(
+                              ' 클릭하면 AI 팁!',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     Row(
                       children: [
@@ -391,56 +391,60 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Positioned(
               top: 130,
-              left: 16,
               right: 16,
-              child: Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.green[700]),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '현재 화면에 ${_jobPostings.length}개의 일자리가 있습니다',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                        ),
-                      ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.95),
+                      Colors.grey[50]!.withOpacity(0.95),
                     ],
                   ),
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(
+                    color: const Color(0xFFF2711C).withOpacity(0.2),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-            // [추가] 돌하르방 정보 카드
-            Positioned(
-              top: 190,
-              left: 16,
-              right: 16,
-              child: Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      const Text('🗿', style: TextStyle(fontSize: 24)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 500),
-                          transitionBuilder: (Widget child, Animation<double> animation) {
-                            return FadeTransition(opacity: animation, child: child);
-                          },
-                          child: Text(
-                            _infoMessages[_currentInfoIndex],
-                            key: ValueKey<int>(_currentInfoIndex),
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                          ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFF2711C),
+                            Color(0xFFFF8C42),
+                          ],
                         ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
+                      child: const Icon(
+                        Icons.work_outline,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '현재 ${_jobPostings.length}개의 일자리가 있습니다',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2D2D2D),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -580,160 +584,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ],
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                // AI 농업 도우미 버튼 추가
-                                Container(
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFF4CAF50),
-                                        Color(0xFF66BB6A),
-                                      ],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _navigateToAiTips,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(FontAwesomeIcons.robot, color: Colors.white),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          'AI 농업 도우미',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // 새로운 기능들을 위한 그리드 버튼
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Container(
-                                        height: 80,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFF2196F3),
-                                              Color(0xFF42A5F5),
-                                            ],
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF2196F3).withValues(alpha: 0.3),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: ElevatedButton(
-                                          onPressed: _navigateToWeatherDashboard,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          child: const Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                FontAwesomeIcons.cloudSun,
-                                                color: Colors.white,
-                                                size: 24,
-                                              ),
-                                              SizedBox(height: 4),
-                                              Text(
-                                                '날씨 정보',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Container(
-                                        height: 80,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFFFF9800),
-                                              Color(0xFFFFB74D),
-                                            ],
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFFFF9800).withValues(alpha: 0.3),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: ElevatedButton(
-                                          onPressed: _navigateToPriceMonitoring,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          child: const Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                FontAwesomeIcons.chartLine,
-                                                color: Colors.white,
-                                                size: 24,
-                                              ),
-                                              SizedBox(height: 4),
-                                              Text(
-                                                '가격 정보',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ],
                             ),
@@ -905,27 +755,54 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _navigateToAiTips() {
+  void _navigateToAiAssistant() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const AiTipsScreen(),
+        builder: (context) => const AiAssistantScreen(),
       ),
     );
+  }
+}
+
+class SpeechBubblePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = const LinearGradient(
+        colors: [
+          Color(0xFFF2711C),
+          Color(0xFFFF8C42),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
+
+    final shadowPaint = Paint()
+      ..color = const Color(0xFFF2711C).withOpacity(0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    final path = Path();
+    final radius = 12.0;
+    final arrowSize = 8.0;
+
+    // 말풍선 본체 (둥근 사각형)
+    path.addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(arrowSize, 0, size.width - arrowSize, size.height),
+      Radius.circular(radius),
+    ));
+
+    // 왼쪽 화살표 (돌하르방을 가리키는)
+    path.moveTo(arrowSize, size.height * 0.5 - arrowSize * 0.5);
+    path.lineTo(0, size.height * 0.5);
+    path.lineTo(arrowSize, size.height * 0.5 + arrowSize * 0.5);
+    path.close();
+
+    // 그림자 그리기
+    canvas.drawPath(path, shadowPaint);
+    
+    // 말풍선 그리기
+    canvas.drawPath(path, paint);
   }
 
-  void _navigateToWeatherDashboard() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const WeatherDashboardScreen(),
-      ),
-    );
-  }
-
-  void _navigateToPriceMonitoring() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const PriceMonitoringScreen(),
-      ),
-    );
-  }
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

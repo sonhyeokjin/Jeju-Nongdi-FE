@@ -127,7 +127,10 @@ class _MainNavigationState extends State<MainNavigation> {
                     color: Colors.grey[600],
                     textStyle: const TextStyle(
                       fontSize: 14, // 텍스트 크기를 조금 줄임
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      fontFamily: 'Pretendard',
+                      letterSpacing: -0.2,
                     ),
                     tabs: [
                       GButton(

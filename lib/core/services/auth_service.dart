@@ -235,21 +235,35 @@ class AuthService {
     }
   }
   
-  // 현재 사용자 정보 조회 (백엔드 API 미지원으로 로컬 정보 반환)
+  // 현재 사용자 정보 조회 (백엔드 API에서 실제 정보 가져옴)
   Future<ApiResult<user_model.User>> getCurrentUser() async {
     try {
       Logger.info('현재 사용자 정보 조회');
       
-      // 먼저 로컬에 저장된 사용자 정보 확인
+      // 먼저 백엔드에서 실제 사용자 정보 조회 시도
+      try {
+        final response = await _apiClient.get<Map<String, dynamic>>('/auth/me');
+        if (response.data != null) {
+          final user = user_model.User.fromJson(response.data!);
+          
+          // 새로운 정보를 로컬에 업데이트
+          await _saveUserInfo(user);
+          
+          Logger.info('백엔드에서 사용자 정보 조회 성공: ${user.email}');
+          return ApiResult.success(user);
+        }
+      } catch (e) {
+        Logger.warning('백엔드 사용자 정보 조회 실패, 로컬 정보 사용: $e');
+        // 백엔드 호출 실패 시 로컬 정보 사용
+      }
+      
+      // 백엔드 호출 실패 시 로컬에 저장된 사용자 정보 사용
       final savedUser = await getSavedUserInfo();
       if (savedUser == null) {
         return ApiResult.failure(const UnauthorizedException('저장된 사용자 정보가 없습니다.'));
       }
       
-      // TODO: 백엔드에 /auth/me 엔드포인트가 추가되면 실제 API 호출로 변경
-      // final response = await _apiClient.get<Map<String, dynamic>>('/auth/me');
-      
-      Logger.info('사용자 정보 조회 성공: ${savedUser.email}');
+      Logger.info('로컬 사용자 정보 조회 성공: ${savedUser.email}');
       return ApiResult.success(savedUser);
     } catch (e) {
       Logger.error('사용자 정보 조회 실패', error: e);
