@@ -117,6 +117,7 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
+
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   bool _isLoading = true;
@@ -138,7 +139,6 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -241,7 +241,6 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
           ),
-
           // 하단 컨텐츠 영역
           Align(
             alignment: Alignment.bottomCenter,
@@ -404,7 +403,6 @@ class _SplashScreenState extends State<SplashScreen>
 
 class AuthGuard extends StatelessWidget {
   final Widget child;
-
   const AuthGuard({super.key, required this.child});
 
   @override
