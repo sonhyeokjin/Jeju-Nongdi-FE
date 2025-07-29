@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _generateMapImageUrl() {
     if (!kIsWeb) return;
 
-    _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?'
+    _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster?'
         'w=400&h=400'
         '&center=$_currentLng,$_currentLat'
         '&level=$_currentZoom'
