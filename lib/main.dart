@@ -12,12 +12,17 @@ import 'package:jejunongdi/screens/signup_screen.dart';
 import 'package:jejunongdi/core/config/environment.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 환경 감지 및 설정
   _detectAndSetEnvironment();
+
+  // 한국어 로케일 데이터 초기화
+  await initializeDateFormatting('ko_KR', null);
+  print('✅ 한국어 로케일 초기화 완료');
 
   // Redux Store 초기화
   redux_store.initializeStore();
@@ -64,7 +69,7 @@ void _detectAndSetEnvironment() {
     EnvironmentConfig.setEnvironment(Environment.development);
     print('📱 모바일 개발 환경으로 설정됨');
   }
-  
+
   print('현재 환경: ${EnvironmentConfig.current.name}');
   print('네이버맵 Client ID: ${EnvironmentConfig.naverMapClientId}');
 }
@@ -112,7 +117,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> 
+
+class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   bool _isLoading = true;
   bool _showAuthButtons = false;
@@ -133,7 +139,6 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -190,7 +195,7 @@ class _SplashScreenState extends State<SplashScreen>
         print('🌐 웹 플랫폼: 권한 요청 건너뜀');
         return;
       }
-      
+
       final permissions = [
         Permission.location,
         Permission.locationWhenInUse,
@@ -218,222 +223,179 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          // 배경 이미지 사용
-          image: DecorationImage(
-            image: AssetImage('lib/assets/images/splash_screen_for_nongdi.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Container(
-          // 이미지 위에 약간의 오버레이 추가 (선택사항)
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.1),
-              ],
+      body: Stack(
+        children: [
+          // 상단 이미지 영역
+          Positioned(
+            top: -50, // 상단 이미지 일부를 잘라냄
+            left: 0,
+            right: 0,
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.65,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('lib/assets/images/splash_screen_for_nongdi.png'),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.bottomCenter, // 하단 부분이 보이도록 정렬
+                ),
+              ),
             ),
           ),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Spacer(flex: 2),
-                
-                // 앱 이름 - 하늘색 배경 영역에 자연스럽게 배치
-                const Text(
-                  '제주 농디',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF2C5530), // 짙은 녹색 (자연스러운 색상)
-                    letterSpacing: 2.0,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 2),
-                        blurRadius: 8.0,
-                        color: Colors.white,
-                      ),
-                    ],
-                  ),
+          // 하단 컨텐츠 영역
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              width: double.infinity,
+              height: MediaQuery.of(context).size.height * 0.45,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(40),
+                  topRight: Radius.circular(40),
                 ),
-                
-                const SizedBox(height: 8),
-                
-                // 서브 타이틀 - 자연스러운 색상
-                const Text(
-                  '제주 농촌의 기회를 잇다',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF4A7C59), // 중간 녹색
-                    letterSpacing: 0.8,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 4.0,
-                        color: Colors.white,
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const Spacer(flex: 3),
-                
-                // 조건부 렌더링: 로딩 중이면 로딩 애니메이션, 완료되면 인증 버튼들
-                if (_isLoading) ...[
-                  // 로딩 인디케이터
-                  Lottie.asset(
-                    'lib/assets/lottie/loading_animation.json',
-                    width: 150,
-                    height: 220,
-                    fit: BoxFit.fill,
-                  ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // 로딩 메시지 - 자연스러운 색상
-                  Text(
-                    kIsWeb ? '정적 지도와 권한을 설정하는 중...' : '네이버 지도와 권한을 설정하는 중...',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2C5530), // 짙은 녹색
-                      letterSpacing: 0.5,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 4.0,
-                          color: Colors.white,
-                        ),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ] else if (_showAuthButtons) ...[
-                  // 인증 버튼들
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Column(
-                        children: [
-                          // 웰컴 메시지 - 자연스러운 색상
-                          const Text(
-                            '제주 농디에 오신 것을 환영합니다!',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF2C5530), // 짙은 녹색
-                              letterSpacing: 0.8,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(0, 2),
-                                  blurRadius: 6.0,
-                                  color: Colors.white,
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          
-                          const SizedBox(height: 8),
-                          
-                          const Text(
-                            '계속하려면 로그인하거나 회원가입하세요',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF4A7C59), // 중간 녹색
-                              letterSpacing: 0.5,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(0, 1),
-                                  blurRadius: 4.0,
-                                  color: Colors.white,
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          
-                          const SizedBox(height: 40),
-                          
-                          // 로그인 버튼
-                          _buildAuthButton(
-                            text: '로그인',
-                            onPressed: () => Navigator.pushNamed(context, '/login'),
-                            isPrimary: true,
-                          ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // 회원가입 버튼
-                          _buildAuthButton(
-                            text: '회원가입',
-                            onPressed: () => Navigator.pushNamed(context, '/signup'),
-                            isPrimary: false,
-                          ),
-                        ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 60),
+                child: Column(
+                  children: [
+                    // 타이틀
+                    const Text(
+                      '제주 농디',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 42,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFFF2711C),
+                        height: 1.2,
+                        letterSpacing: -0.8,
                       ),
                     ),
-                  ),
-                ],
-                
-                const SizedBox(height: 50),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildAuthButton({
-    required String text,
-    required VoidCallback onPressed,
-    required bool isPrimary,
-  }) {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      margin: const EdgeInsets.symmetric(horizontal: 40),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isPrimary 
-              ? const Color(0xFFF2711C)
-              : Colors.white.withOpacity(0.9),
-          foregroundColor: isPrimary 
-              ? Colors.white
-              : const Color(0xFFF2711C),
-          elevation: isPrimary ? 8 : 4,
-          shadowColor: isPrimary 
-              ? const Color(0xFFF2711C).withOpacity(0.4)
-              : Colors.black.withOpacity(0.2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: isPrimary 
-                ? BorderSide.none
-                : const BorderSide(color: Color(0xFFF2711C), width: 2),
+                    const SizedBox(height: 16),
+
+                    // 서브 타이틀
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        '제주 농촌의 기회를 잇다',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFF2711C).withOpacity(0.85),
+                          height: 1.3,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // 로딩 중일 때
+                    if (_isLoading) ...[
+                      const CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE8785A)),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        kIsWeb ? '앱을 준비하고 있어요...' : '지도와 권한을 설정하는 중...',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+
+                    // 로딩 완료 후 버튼 표시
+                    if (_showAuthButtons) ...[
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: Column(
+                            children: [
+                              // Log in 버튼
+                              Container(
+                                width: double.infinity,
+                                height: 56,
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.pushNamed(context, '/login'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF2711C),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(28),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '로그인',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              // 회원가입 버튼
+                              Container(
+                                width: double.infinity,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(28),
+                                  border: Border.all(
+                                    color: const Color(0xFFF2711C).withOpacity(0.4),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFF2711C).withOpacity(0.15),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.pushNamed(context, '/signup'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: const Color(0xFFF2711C),
+                                    elevation: 0,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(28),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '회원가입',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFF2711C),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: isPrimary 
-                ? Colors.white
-                : const Color(0xFFF2711C),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -441,16 +403,27 @@ class _SplashScreenState extends State<SplashScreen>
 
 class AuthGuard extends StatelessWidget {
   final Widget child;
-  
   const AuthGuard({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return StoreConnector<AppState, bool>(
-      converter: (store) => store.state.userState.isAuthenticated,
-      builder: (context, isAuthenticated) {
+    return StoreConnector<AppState, AppState>(
+      converter: (store) => store.state,
+      builder: (context, state) {
+        final isAuthenticated = state.userState.isAuthenticated;
+        final isLoading = state.userState.isLoading;
+        
         if (isAuthenticated) {
           return child;
+        } else if (isLoading) {
+          // 로딩 중일 때는 로딩 화면 표시
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFFF2711C),
+              ),
+            ),
+          );
         } else {
           // 인증되지 않은 경우 스플래시 화면으로 리다이렉트
           WidgetsBinding.instance.addPostFrameCallback((_) {

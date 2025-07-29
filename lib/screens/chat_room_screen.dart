@@ -42,15 +42,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     });
 
-    // 입장 API 호출
+    // 입장 API 호출 및 읽음 처리
     ChatService.instance.enterChatRoom(roomId: widget.roomId);
+    StoreProvider.of<AppState>(context, listen: false)
+        .dispatch(MarkMessagesAsReadAction(widget.roomId));
   }
 
   @override
   void dispose() {
     // 퇴장 API 호출
-
-    _messageController.dispose();ChatService.instance.leaveChatRoom(roomId: widget.roomId);
+    ChatService.instance.leaveChatRoom(roomId: widget.roomId);
+    _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }

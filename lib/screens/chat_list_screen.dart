@@ -30,65 +30,132 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // [해결] AppBar 구조를 하나로 합치고, 모든 IconButton에 onPressed를 추가했습니다.
-      appBar: AppBar(
-        title: const Text(
-          '궁시렁',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 1.0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_comment_outlined),
-            tooltip: '새 대화',
-            onPressed: () {
-              // TODO: 실제로는 사용자 검색 화면으로 이동해야 함
-              // 임시로 사용자 ID 2와 채팅 시작
-              StoreProvider.of<AppState>(context, listen: false)
-                  .dispatch(CreateChatRoomAction(2));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: '새로고침',
-            onPressed: () {
-              StoreProvider.of<AppState>(context, listen: false)
-                  .dispatch(LoadChatRoomsAction());
-            },
-          ),
-        ],
-      ),
-      body: StoreConnector<AppState, _ViewModel>(
-        converter: (store) => _ViewModel.fromStore(store),
-        builder: (context, vm) {
-          if (vm.isLoading && vm.chatRooms.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (vm.error != null) {
-            return Center(child: Text('오류: ${vm.error}'));
-          }
-
-          if (vm.chatRooms.isEmpty) {
-            return const Center(
-              child: Text(
-                '대화중인 채팅방이 없습니다.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 헤더 섹션
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '궁시렁',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFF2711C),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.add_comment_outlined),
+                          tooltip: '새 대화',
+                          color: const Color(0xFFF2711C),
+                          onPressed: () {
+                            final store = StoreProvider.of<AppState>(context, listen: false);
+                            // 멘토링 기반 채팅을 생성해보기 (멘토링 데이터의 첫 번째 항목 활용)
+                            final mentorings = store.state.mentoringState.mentorings;
+                            if (mentorings.isNotEmpty) {
+                              final firstMentoring = mentorings.first;
+                              store.dispatch(CreateChatRoomAction(
+                                chatType: "MENTORING",
+                                participantId: firstMentoring.author.id,
+                                referenceId: firstMentoring.id,
+                                initialMessage: "${firstMentoring.title} 멘토링 관련해서 문의드립니다.",
+                              ));
+                            } else {
+                              // 멘토링 데이터가 없으면 일반 채팅으로 다른 ID 시도
+                              store.dispatch(CreateChatRoomAction(
+                                chatType: "GENERAL",
+                                participantId: 3, // 다른 ID로 시도
+                                referenceId: 1,
+                                initialMessage: "안녕하세요!",
+                              ));
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.refresh),
+                          tooltip: '새로고침',
+                          color: const Color(0xFFF2711C),
+                          onPressed: () {
+                            StoreProvider.of<AppState>(context, listen: false)
+                                .dispatch(LoadChatRoomsAction());
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            );
-          }
+            ),
+            // 채팅 리스트
+            Expanded(
+              child: StoreConnector<AppState, _ViewModel>(
+                converter: (store) => _ViewModel.fromStore(store),
+                builder: (context, vm) {
+                  if (vm.isLoading && vm.chatRooms.isEmpty) {
+                    return const Center(child: CircularProgressIndicator(
+                      color: Color(0xFFF2711C),
+                    ));
+                  }
 
-          return ListView.separated(
-            itemCount: vm.chatRooms.length,
-            itemBuilder: (context, index) {
-              final chatRoom = vm.chatRooms[index];
-              return _ChatRoomTile(chatRoom: chatRoom);
-            },
-            separatorBuilder: (context, index) =>
-            const Divider(height: 1, indent: 16, endIndent: 16),
-          );
-        },
+                  if (vm.error != null) {
+                    return Center(child: Text('오류: ${vm.error}'));
+                  }
+
+                  if (vm.chatRooms.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        '대화중인 채팅방이 없습니다.',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 100), // 하단 AppBar 공간 확보
+                    itemCount: vm.chatRooms.length,
+                    itemBuilder: (context, index) {
+                      final chatRoom = vm.chatRooms[index];
+                      return _ChatRoomTile(chatRoom: chatRoom);
+                    },
+                    separatorBuilder: (context, index) =>
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -127,7 +194,7 @@ class _ChatRoomTile extends StatelessWidget {
             : null,
       ),
       title: Text(
-        chatRoom.roomName,
+        chatRoom.roomName ?? '이름 없는 채팅방',
         style: const TextStyle(fontWeight: FontWeight.bold),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -171,7 +238,7 @@ class _ChatRoomTile extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => ChatRoomScreen(
               roomId: chatRoom.roomId,
-              roomName: chatRoom.roomName,
+              roomName: chatRoom.roomName ?? '이름 없는 채팅방',
             ),
           ),
         );

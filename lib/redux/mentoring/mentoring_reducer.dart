@@ -82,12 +82,8 @@ MentoringState _loadMentoringsFailure(MentoringState state, LoadMentoringsFailur
 
 // 내 멘토링 목록
 MentoringState _loadMyMentoringsSuccess(MentoringState state, LoadMyMentoringsSuccessAction action) {
-  final newMyMentorings = action.refresh 
-      ? action.pageResponse.content
-      : [...state.myMentorings, ...action.pageResponse.content];
-      
   return state.copyWith(
-    myMentorings: newMyMentorings,
+    myMentorings: action.mentorings,
     clearError: true,
   );
 }

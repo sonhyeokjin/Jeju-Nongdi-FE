@@ -10,6 +10,10 @@ import 'package:jejunongdi/screens/job_list_screen.dart';
 import 'package:jejunongdi/screens/login_screen.dart';
 import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
 import 'package:jejunongdi/screens/job_posting_create_screen.dart';
+import 'package:jejunongdi/screens/ai_tips_screen.dart';
+import 'package:jejunongdi/screens/weather_dashboard_screen.dart';
+import 'package:jejunongdi/screens/price_monitoring_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -544,6 +548,160 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 ),
+                                const SizedBox(height: 16),
+                                // AI 농업 도우미 버튼 추가
+                                Container(
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF4CAF50),
+                                        Color(0xFF66BB6A),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: _navigateToAiTips,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(FontAwesomeIcons.robot, color: Colors.white),
+                                        SizedBox(width: 12),
+                                        Text(
+                                          'AI 농업 도우미',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                // 새로운 기능들을 위한 그리드 버튼
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFF2196F3),
+                                              Color(0xFF42A5F5),
+                                            ],
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF2196F3).withValues(alpha: 0.3),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed: _navigateToWeatherDashboard,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            shadowColor: Colors.transparent,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          child: const Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                FontAwesomeIcons.cloudSun,
+                                                color: Colors.white,
+                                                size: 24,
+                                              ),
+                                              SizedBox(height: 4),
+                                              Text(
+                                                '날씨 정보',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Container(
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFFFF9800),
+                                              Color(0xFFFFB74D),
+                                            ],
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFFFF9800).withValues(alpha: 0.3),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed: _navigateToPriceMonitoring,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            shadowColor: Colors.transparent,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          child: const Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                FontAwesomeIcons.chartLine,
+                                                color: Colors.white,
+                                                size: 24,
+                                              ),
+                                              SizedBox(height: 4),
+                                              Text(
+                                                '가격 정보',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
@@ -578,6 +736,30 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const JobListScreen(),
+      ),
+    );
+  }
+
+  void _navigateToAiTips() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AiTipsScreen(),
+      ),
+    );
+  }
+
+  void _navigateToWeatherDashboard() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WeatherDashboardScreen(),
+      ),
+    );
+  }
+
+  void _navigateToPriceMonitoring() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const PriceMonitoringScreen(),
       ),
     );
   }

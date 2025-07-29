@@ -1,5 +1,6 @@
 import 'package:jejunongdi/redux/chat/chat_actions.dart';
 import 'package:jejunongdi/redux/chat/chat_state.dart';
+import 'package:jejunongdi/core/models/chat_models.dart';
 import 'package:redux/redux.dart';
 
 final chatReducer = combineReducers<ChatState>([
@@ -10,6 +11,7 @@ final chatReducer = combineReducers<ChatState>([
   TypedReducer<ChatState, LoadChatMessagesSuccessAction>(_loadChatMessagesSuccess),
   TypedReducer<ChatState, ReceiveMessageAction>(_receiveMessage),
   TypedReducer<ChatState, CreateChatRoomSuccessAction>(_createChatRoomSuccess),
+  TypedReducer<ChatState, MarkMessagesAsReadSuccessAction>(_markMessagesAsReadSuccess),
 ]);
 
 ChatState _setLoading(ChatState state, SetChatLoadingAction action) {
@@ -88,4 +90,23 @@ ChatState _createChatRoomSuccess(ChatState state, CreateChatRoomSuccessAction ac
   return state.copyWith(
     chatRooms: [action.newRoom, ...state.chatRooms],
   );
+}
+
+ChatState _markMessagesAsReadSuccess(ChatState state, MarkMessagesAsReadSuccessAction action) {
+  // 메시지 읽음 처리 성공 시 해당 채팅방의 읽지 않은 메시지 수 초기화
+  final updatedRooms = state.chatRooms.map((room) {
+    if (room.roomId == action.roomId) {
+      return ChatRoomResponse(
+        roomId: room.roomId,
+        roomName: room.roomName,
+        otherUser: room.otherUser,
+        lastMessage: room.lastMessage,
+        lastMessageTime: room.lastMessageTime,
+        unreadCount: 0, // 읽지 않은 메시지 수 초기화
+      );
+    }
+    return room;
+  }).toList();
+  
+  return state.copyWith(chatRooms: updatedRooms);
 }

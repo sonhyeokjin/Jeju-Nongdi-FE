@@ -148,4 +148,229 @@ class ExternalApiService {
     Logger.info('질문 전처리 완료: $processed');
     return processed;
   }
+
+  /// 작물별 AI 재배 가이드를 조회합니다.
+  Future<ApiResult<String>> getCropGuide(String cropName) async {
+    try {
+      Logger.info('작물별 AI 재배 가이드 조회 시도 - cropName: $cropName');
+      
+      final response = await _apiClient.get<String>(
+        '/api/v1/external/ai/crop-guide/$cropName',
+      );
+      
+      if (response.data != null) {
+        Logger.info('작물별 AI 재배 가이드 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('작물별 AI 재배 가이드 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('작물별 AI 재배 가이드 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('작물별 AI 재배 가이드 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 사용자별 날씨 기반 AI 조언을 조회합니다.
+  Future<ApiResult<String>> getWeatherAdvice(int userId) async {
+    try {
+      Logger.info('사용자별 날씨 기반 AI 조언 조회 시도 - userId: $userId');
+      
+      final response = await _apiClient.get<String>(
+        '/api/v1/external/ai/weather-advice/$userId',
+      );
+      
+      if (response.data != null) {
+        Logger.info('사용자별 날씨 기반 AI 조언 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('날씨 기반 AI 조언 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('사용자별 날씨 기반 AI 조언 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('날씨 기반 AI 조언 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 제주 특산품 가격 정보를 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getJejuSpecialtiesPrice() async {
+    try {
+      Logger.info('제주 특산품 가격 정보 조회 시도');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/external/price/jeju-specialties',
+      );
+      
+      if (response.data != null) {
+        Logger.info('제주 특산품 가격 정보 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('제주 특산품 가격 정보 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('제주 특산품 가격 정보 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('제주 특산품 가격 정보 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 작물별 가격 추이를 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getPriceTrend(String cropName) async {
+    try {
+      Logger.info('작물별 가격 추이 조회 시도 - cropName: $cropName');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/external/price/trend/$cropName',
+      );
+      
+      if (response.data != null) {
+        Logger.info('작물별 가격 추이 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('작물별 가격 추이 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('작물별 가격 추이 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('작물별 가격 추이 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 작물별 현재 가격을 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getCropPrice(String cropName) async {
+    try {
+      Logger.info('작물별 현재 가격 조회 시도 - cropName: $cropName');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/external/price/$cropName',
+      );
+      
+      if (response.data != null) {
+        Logger.info('작물별 현재 가격 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('작물별 현재 가격 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('작물별 현재 가격 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('작물별 현재 가격 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 모든 외부 API 테스트를 실행합니다.
+  Future<ApiResult<Map<String, dynamic>>> testAllExternalApis(int userId) async {
+    try {
+      Logger.info('모든 외부 API 테스트 실행 시도 - userId: $userId');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/external/test/all/$userId',
+      );
+      
+      if (response.data != null) {
+        Logger.info('모든 외부 API 테스트 실행 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('외부 API 테스트 실행 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('모든 외부 API 테스트 실행 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('외부 API 테스트 실행 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 농업 작업 추천 날씨 정보를 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getFarmWorkWeather() async {
+    try {
+      Logger.info('농업 작업 추천 날씨 정보 조회 시도');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/external/weather/farm-work',
+      );
+      
+      if (response.data != null) {
+        Logger.info('농업 작업 추천 날씨 정보 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('농업 작업 추천 날씨 정보 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('농업 작업 추천 날씨 정보 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('농업 작업 추천 날씨 정보 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 제주 날씨 정보를 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getJejuWeather() async {
+    try {
+      Logger.info('제주 날씨 정보 조회 시도');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/external/weather/jeju',
+      );
+      
+      if (response.data != null) {
+        Logger.info('제주 날씨 정보 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('제주 날씨 정보 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('제주 날씨 정보 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('제주 날씨 정보 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 날씨 요약 정보를 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getWeatherSummary() async {
+    try {
+      Logger.info('날씨 요약 정보 조회 시도');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/external/weather/summary',
+      );
+      
+      if (response.data != null) {
+        Logger.info('날씨 요약 정보 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('날씨 요약 정보 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('날씨 요약 정보 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('날씨 요약 정보 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
 }

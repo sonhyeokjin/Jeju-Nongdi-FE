@@ -136,4 +136,221 @@ class AiTipService {
       return ApiResult.failure(UnknownException('팁 목록 조회 중 오류가 발생했습니다: $e'));
     }
   }
+
+  /// 사용자의 일일 팁 목록을 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getDailyTips({
+    required int userId,
+    String? targetDate,
+    List<String>? tipTypes,
+    String? cropType,
+    int? priorityLevel,
+    bool onlyUnread = false,
+  }) async {
+    try {
+      Logger.info('일일 팁 목록 조회 시도 - userId: $userId');
+      
+      final queryParameters = <String, dynamic>{};
+      if (targetDate != null) queryParameters['targetDate'] = targetDate;
+      if (tipTypes != null) queryParameters['tipTypes'] = tipTypes;
+      if (cropType != null) queryParameters['cropType'] = cropType;
+      if (priorityLevel != null) queryParameters['priorityLevel'] = priorityLevel;
+      queryParameters['onlyUnread'] = onlyUnread;
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/ai-tips/daily/$userId',
+        queryParameters: queryParameters,
+      );
+      
+      if (response.data != null) {
+        Logger.info('일일 팁 목록 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('일일 팁 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('일일 팁 목록 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('일일 팁 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 오늘의 농살 - 메인 화면용 팁을 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getTodayFarmLife(int userId) async {
+    try {
+      Logger.info('오늘의 농살 조회 시도 - userId: $userId');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/ai-tips/today/$userId',
+      );
+      
+      if (response.data != null) {
+        Logger.info('오늘의 농살 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('오늘의 농살 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('오늘의 농살 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('오늘의 농살 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 팁 유형 목록을 조회합니다.
+  Future<ApiResult<List<Map<String, dynamic>>>> getTipTypes() async {
+    try {
+      Logger.info('팁 유형 목록 조회 시도');
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/v1/ai-tips/types',
+      );
+      
+      if (response.data != null) {
+        final types = response.data!.cast<Map<String, dynamic>>();
+        Logger.info('팁 유형 목록 조회 성공: ${types.length}개');
+        return ApiResult.success(types);
+      } else {
+        return ApiResult.failure(const UnknownException('팁 유형 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('팁 유형 목록 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('팁 유형 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 돌하르방 클릭시 표시할 알림 리스트를 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getNotificationList({
+    required int userId,
+    int page = 0,
+    int size = 20,
+    List<String>? tipTypes,
+  }) async {
+    try {
+      Logger.info('알림 리스트 조회 시도 - userId: $userId');
+      
+      final queryParameters = <String, dynamic>{
+        'page': page,
+        'size': size,
+      };
+      if (tipTypes != null) queryParameters['tipTypes'] = tipTypes;
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/ai-tips/notifications/$userId',
+        queryParameters: queryParameters,
+      );
+      
+      if (response.data != null) {
+        Logger.info('알림 리스트 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('알림 리스트 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('알림 리스트 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('알림 리스트 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 지역별 병해충 경보를 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getPestAlert({
+    required String region,
+    String? targetDate,
+  }) async {
+    try {
+      Logger.info('병해충 경보 조회 시도 - region: $region');
+      
+      final queryParameters = <String, dynamic>{};
+      if (targetDate != null) queryParameters['targetDate'] = targetDate;
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/ai-tips/pest-alert/$region',
+        queryParameters: queryParameters,
+      );
+      
+      if (response.data != null) {
+        Logger.info('병해충 경보 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('병해충 경보 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('병해충 경보 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('병해충 경보 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 농장별 날씨 기반 알림을 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getWeatherBasedTips({
+    required int farmId,
+    String? targetDate,
+  }) async {
+    try {
+      Logger.info('농장별 날씨 기반 알림 조회 시도 - farmId: $farmId');
+      
+      final queryParameters = <String, dynamic>{};
+      if (targetDate != null) queryParameters['targetDate'] = targetDate;
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/ai-tips/weather/$farmId',
+        queryParameters: queryParameters,
+      );
+      
+      if (response.data != null) {
+        Logger.info('농장별 날씨 기반 알림 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('날씨 기반 알림 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('농장별 날씨 기반 알림 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('날씨 기반 알림 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  /// 작물별 가이드를 조회합니다.
+  Future<ApiResult<Map<String, dynamic>>> getCropGuide(String cropType) async {
+    try {
+      Logger.info('작물별 가이드 조회 시도 - cropType: $cropType');
+      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/ai-tips/crop-guide/$cropType',
+      );
+      
+      if (response.data != null) {
+        Logger.info('작물별 가이드 조회 성공');
+        return ApiResult.success(response.data!);
+      } else {
+        return ApiResult.failure(const UnknownException('작물별 가이드 조회 응답이 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('작물별 가이드 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('작물별 가이드 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
 }

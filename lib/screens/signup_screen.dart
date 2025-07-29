@@ -117,10 +117,27 @@ class SignupScreenState extends State<SignupScreen>
     return StoreConnector<AppState, AppState>(
       converter: (store) => store.state,
       onWillChange: (previousState, newState) {
-        // 회원가입 성공 시 네비게이션
+        // 회원가입 성공 시 네비게이션 - 로그인 화면으로 돌아가기
         if (previousState?.userState.user == null && 
             newState.userState.user != null) {
-          Navigator.pushReplacementNamed(context, '/main');
+          // 회원가입 성공 시 자동 로그인 해제하고 로그인 화면으로 이동
+          StoreProvider.of<AppState>(context, listen: false).dispatch(LogoutAction());
+          
+          // 회원가입 성공 메시지 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('회원가입이 완료되었습니다. 로그인해주세요.'),
+              backgroundColor: Colors.green,
+              duration: Duration(milliseconds: 2000),
+            ),
+          );
+          
+          // 잠시 후 로그인 화면으로 이동
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (context.mounted) {
+              Navigator.of(context).pushReplacementNamed('/login');
+            }
+          });
         }
         
         // 에러 메시지 표시

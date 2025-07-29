@@ -9,7 +9,7 @@ part of 'chat_models.dart';
 ChatRoomResponse _$ChatRoomResponseFromJson(Map<String, dynamic> json) =>
     ChatRoomResponse(
       roomId: json['roomId'] as String,
-      roomName: json['roomName'] as String,
+      roomName: json['roomName'] as String?,
       otherUser: json['otherUser'] == null
           ? null
           : UserResponse.fromJson(json['otherUser'] as Map<String, dynamic>),
@@ -17,7 +17,7 @@ ChatRoomResponse _$ChatRoomResponseFromJson(Map<String, dynamic> json) =>
       lastMessageTime: json['lastMessageTime'] == null
           ? null
           : DateTime.parse(json['lastMessageTime'] as String),
-      unreadCount: (json['unreadCount'] as num).toInt(),
+      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$ChatRoomResponseToJson(ChatRoomResponse instance) =>
@@ -61,8 +61,18 @@ Map<String, dynamic> _$ChatMessageRequestToJson(ChatMessageRequest instance) =>
 
 ChatRoomCreateRequest _$ChatRoomCreateRequestFromJson(
   Map<String, dynamic> json,
-) => ChatRoomCreateRequest(otherUserId: (json['otherUserId'] as num).toInt());
+) => ChatRoomCreateRequest(
+  chatType: json['chatType'] as String,
+  participantId: (json['participantId'] as num).toInt(),
+  referenceId: (json['referenceId'] as num).toInt(),
+  initialMessage: json['initialMessage'] as String?,
+);
 
 Map<String, dynamic> _$ChatRoomCreateRequestToJson(
   ChatRoomCreateRequest instance,
-) => <String, dynamic>{'otherUserId': instance.otherUserId};
+) => <String, dynamic>{
+  'chatType': instance.chatType,
+  'participantId': instance.participantId,
+  'referenceId': instance.referenceId,
+  'initialMessage': instance.initialMessage,
+};

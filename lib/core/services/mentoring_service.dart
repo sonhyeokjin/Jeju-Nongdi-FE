@@ -80,8 +80,8 @@ class MentoringService {
     }
   }
   
-  // 멘토링 필터링 조회
-  Future<ApiResult<PageResponse<MentoringResponse>>> getFilteredMentorings({
+  // 멘토링 검색 (페이징 지원)
+  Future<ApiResult<List<MentoringResponse>>> getFilteredMentorings({
     int page = 0,
     int size = 20,
     String? category,
@@ -91,13 +91,9 @@ class MentoringService {
     String? keyword,
   }) async {
     try {
-      Logger.info('멘토링 필터링 조회');
+      Logger.info('멘토링 검색 (페이징)');
       
-      final Map<String, dynamic> queryParams = {
-        'page': page,
-        'size': size,
-        'sort': 'createdAt,desc',
-      };
+      final Map<String, dynamic> queryParams = {};
       
       if (category != null) queryParams['category'] = category;
       if (mentoringType != null) queryParams['mentoringType'] = mentoringType;
@@ -105,57 +101,47 @@ class MentoringService {
       if (status != null) queryParams['status'] = status;
       if (keyword != null && keyword.isNotEmpty) queryParams['keyword'] = keyword;
       
-      final response = await _apiClient.get<Map<String, dynamic>>(
+      final response = await _apiClient.get<List<dynamic>>(
         '/api/mentorings/search',
-        queryParameters: queryParams,
+        queryParameters: queryParams.isEmpty ? null : queryParams,
       );
       
       if (response.data != null) {
-        final pageResponse = PageResponse<MentoringResponse>.fromJson(
-          response.data!,
-          (json) => MentoringResponse.fromJson(json as Map<String, dynamic>),
-        );
+        final mentorings = response.data!
+            .map((item) => MentoringResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
         
-        Logger.info('멘토링 필터링 조회 성공 - 총 ${pageResponse.totalElements}개');
-        return ApiResult.success(pageResponse);
+        Logger.info('멘토링 검색 성공 - 총 ${mentorings.length}개');
+        return ApiResult.success(mentorings);
       } else {
-        return ApiResult.failure(const UnknownException('멘토링 필터링 응답 데이터가 없습니다.'));
+        return ApiResult.failure(const UnknownException('멘토링 검색 응답 데이터가 없습니다.'));
       }
     } catch (e) {
-      Logger.error('멘토링 필터링 조회 실패', error: e);
+      Logger.error('멘토링 검색 실패', error: e);
       if (e is ApiException) {
         return ApiResult.failure(e);
       } else {
-        return ApiResult.failure(UnknownException('멘토링 필터링 조회 중 오류가 발생했습니다: $e'));
+        return ApiResult.failure(UnknownException('멘토링 검색 중 오류가 발생했습니다: $e'));
       }
     }
   }
   
   // 내가 작성한 멘토링 목록 조회
-  Future<ApiResult<PageResponse<MentoringResponse>>> getMyMentorings({
-    int page = 0,
-    int size = 20,
-  }) async {
+  Future<ApiResult<List<MentoringResponse>>> getMyMentorings() async {
     try {
       Logger.info('내 멘토링 목록 조회');
       
-      final response = await _apiClient.get<Map<String, dynamic>>(
+      final response = await _apiClient.get<List<dynamic>>(
         '/api/mentorings/my',
-        queryParameters: {
-          'page': page,
-          'size': size,
-          'sort': 'createdAt,desc',
-        },
       );
       
       if (response.data != null) {
-        final pageResponse = PageResponse<MentoringResponse>.fromJson(
-          response.data!,
-          (json) => MentoringResponse.fromJson(json as Map<String, dynamic>),
-        );
+        final mentorings = response.data!
+            .map((item) => MentoringResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
         
-        Logger.info('내 멘토링 목록 조회 성공 - 총 ${pageResponse.totalElements}개');
-        return ApiResult.success(pageResponse);
+        Logger.info('내 멘토링 목록 조회 성공 - 총 ${mentorings.length}개');
+        return ApiResult.success(mentorings);
       } else {
         return ApiResult.failure(const UnknownException('내 멘토링 목록 응답 데이터가 없습니다.'));
       }
@@ -276,6 +262,216 @@ class MentoringService {
         return ApiResult.failure(e);
       } else {
         return ApiResult.failure(UnknownException('멘토링 상태 변경 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  // 멘토링 타입별 조회
+  Future<ApiResult<List<MentoringResponse>>> getMentoringsByType(String mentoringType) async {
+    try {
+      Logger.info('멘토링 타입별 조회 - 타입: $mentoringType');
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/mentorings/type/$mentoringType',
+      );
+      
+      if (response.data != null) {
+        final mentorings = response.data!
+            .map((item) => MentoringResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+        
+        Logger.info('멘토링 타입별 조회 성공 - 총 ${mentorings.length}개');
+        return ApiResult.success(mentorings);
+      } else {
+        return ApiResult.failure(const UnknownException('멘토링 타입별 조회 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('멘토링 타입별 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('멘토링 타입별 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  // 카테고리별 멘토링 조회
+  Future<ApiResult<List<MentoringResponse>>> getMentoringsByCategory(String category) async {
+    try {
+      Logger.info('카테고리별 멘토링 조회 - 카테고리: $category');
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/mentorings/category/$category',
+      );
+      
+      if (response.data != null) {
+        final mentorings = response.data!
+            .map((item) => MentoringResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+        
+        Logger.info('카테고리별 멘토링 조회 성공 - 총 ${mentorings.length}개');
+        return ApiResult.success(mentorings);
+      } else {
+        return ApiResult.failure(const UnknownException('카테고리별 멘토링 조회 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('카테고리별 멘토링 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('카테고리별 멘토링 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  // 멘토링 검색 (다양한 조건)
+  Future<ApiResult<List<MentoringResponse>>> searchMentorings({
+    String? mentoringType,
+    String? category,
+    String? experienceLevel,
+    String? location,
+    String? keyword,
+  }) async {
+    try {
+      Logger.info('멘토링 검색');
+      
+      final Map<String, dynamic> queryParams = {};
+      
+      if (mentoringType != null) queryParams['mentoringType'] = mentoringType;
+      if (category != null) queryParams['category'] = category;
+      if (experienceLevel != null) queryParams['experienceLevel'] = experienceLevel;
+      if (location != null) queryParams['location'] = location;
+      if (keyword != null && keyword.isNotEmpty) queryParams['keyword'] = keyword;
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/mentorings/search',
+        queryParameters: queryParams.isEmpty ? null : queryParams,
+      );
+      
+      if (response.data != null) {
+        final mentorings = response.data!
+            .map((item) => MentoringResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+        
+        Logger.info('멘토링 검색 성공 - 총 ${mentorings.length}개');
+        return ApiResult.success(mentorings);
+      } else {
+        return ApiResult.failure(const UnknownException('멘토링 검색 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('멘토링 검색 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('멘토링 검색 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  // 멘토링 카테고리 목록 조회
+  Future<ApiResult<List<String>>> getCategories() async {
+    try {
+      Logger.info('멘토링 카테고리 목록 조회');
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/mentorings/categories',
+      );
+      
+      if (response.data != null) {
+        final categories = response.data!.cast<String>();
+        
+        Logger.info('멘토링 카테고리 목록 조회 성공 - 총 ${categories.length}개');
+        return ApiResult.success(categories);
+      } else {
+        return ApiResult.failure(const UnknownException('멘토링 카테고리 목록 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('멘토링 카테고리 목록 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('멘토링 카테고리 목록 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  // 멘토링 타입 목록 조회
+  Future<ApiResult<List<String>>> getMentoringTypes() async {
+    try {
+      Logger.info('멘토링 타입 목록 조회');
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/mentorings/mentoring-types',
+      );
+      
+      if (response.data != null) {
+        final types = response.data!.cast<String>();
+        
+        Logger.info('멘토링 타입 목록 조회 성공 - 총 ${types.length}개');
+        return ApiResult.success(types);
+      } else {
+        return ApiResult.failure(const UnknownException('멘토링 타입 목록 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('멘토링 타입 목록 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('멘토링 타입 목록 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  // 경험 수준 목록 조회
+  Future<ApiResult<List<String>>> getExperienceLevels() async {
+    try {
+      Logger.info('경험 수준 목록 조회');
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/mentorings/experience-levels',
+      );
+      
+      if (response.data != null) {
+        final levels = response.data!.cast<String>();
+        
+        Logger.info('경험 수준 목록 조회 성공 - 총 ${levels.length}개');
+        return ApiResult.success(levels);
+      } else {
+        return ApiResult.failure(const UnknownException('경험 수준 목록 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('경험 수준 목록 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('경험 수준 목록 조회 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  // 멘토링 상태 목록 조회
+  Future<ApiResult<List<String>>> getMentoringStatuses() async {
+    try {
+      Logger.info('멘토링 상태 목록 조회');
+      
+      final response = await _apiClient.get<List<dynamic>>(
+        '/api/mentorings/statuses',
+      );
+      
+      if (response.data != null) {
+        final statuses = response.data!.cast<String>();
+        
+        Logger.info('멘토링 상태 목록 조회 성공 - 총 ${statuses.length}개');
+        return ApiResult.success(statuses);
+      } else {
+        return ApiResult.failure(const UnknownException('멘토링 상태 목록 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('멘토링 상태 목록 조회 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('멘토링 상태 목록 조회 중 오류가 발생했습니다: $e'));
       }
     }
   }

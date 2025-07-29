@@ -7,7 +7,7 @@ part 'chat_models.g.dart';
 @JsonSerializable()
 class ChatRoomResponse {
   final String roomId;
-  final String roomName;
+  final String? roomName;
   final UserResponse? otherUser; // 1:1 채팅의 경우 상대방 정보
   final String? lastMessage;
   final DateTime? lastMessageTime;
@@ -15,11 +15,11 @@ class ChatRoomResponse {
 
   ChatRoomResponse({
     required this.roomId,
-    required this.roomName,
+    this.roomName,
     this.otherUser,
     this.lastMessage,
     this.lastMessageTime,
-    required this.unreadCount,
+    this.unreadCount = 0, // 기본값 설정
   });
 
   factory ChatRoomResponse.fromJson(Map<String, dynamic> json) =>
@@ -70,10 +70,17 @@ class ChatMessageRequest {
 // 채팅방 생성 요청 모델
 @JsonSerializable()
 class ChatRoomCreateRequest {
-  // 예시: 1:1 채팅 생성을 위해 상대방 사용자 ID를 포함
-  final int otherUserId;
+  final String chatType; // MENTORING, FARMLAND, JOB_POSTING, GENERAL
+  final int participantId; // 상대방 사용자 ID
+  final int referenceId; // 관련 게시물/농지 등의 ID
+  final String? initialMessage; // 초기 메시지 (선택)
 
-  ChatRoomCreateRequest({required this.otherUserId});
+  ChatRoomCreateRequest({
+    required this.chatType,
+    required this.participantId,
+    required this.referenceId,
+    this.initialMessage,
+  });
 
   factory ChatRoomCreateRequest.fromJson(Map<String, dynamic> json) =>
       _$ChatRoomCreateRequestFromJson(json);
