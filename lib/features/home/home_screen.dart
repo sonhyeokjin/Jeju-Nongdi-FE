@@ -16,7 +16,6 @@ import 'package:jejunongdi/screens/weather_dashboard_screen.dart';
 import 'package:jejunongdi/screens/price_monitoring_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'dart:math' as math;
-import 'package:http/http.dart' as http;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,7 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
   double _currentLng = _initialLng;
   int _currentZoom = _initialZoom;
   String? _mapImageUrl;
-  Uint8List? _mapImageData;
 
   // [추가] 새로운 카드를 위한 상태 변수들
   Timer? _infoTimer;
@@ -101,40 +99,16 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?'
-        'w=400&h=400'
-        '&center=$_currentLng,$_currentLat'
-        '&level=$_currentZoom'
-        '$markersParam'
-        '&X-NCP-APIGW-API-KEY-ID=$_naverApiKey';
+    setState(() {
+      _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?'
+          'w=400&h=400'
+          '&center=$_currentLng,$_currentLat'
+          '&level=$_currentZoom'
+          '$markersParam'
+          '&X-NCP-APIGW-API-KEY-ID=$_naverApiKey';
+    });
     
     Logger.info('지도 이미지 URL 생성: $_mapImageUrl');
-    _loadMapImage();
-  }
-
-  Future<void> _loadMapImage() async {
-    if (!kIsWeb || _mapImageUrl == null) return;
-
-    try {
-      final response = await http.get(Uri.parse(_mapImageUrl!));
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _mapImageData = response.bodyBytes;
-        });
-        Logger.info('지도 이미지 로드 성공');
-      } else {
-        Logger.error('지도 이미지 로드 실패: ${response.statusCode} - ${response.body}');
-        setState(() {
-          _mapImageData = null;
-        });
-      }
-    } catch (e) {
-      Logger.error('지도 이미지 로드 오류', error: e);
-      setState(() {
-        _mapImageData = null;
-      });
-    }
   }
 
   double _getLatitudeRange() {
@@ -922,10 +896,21 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, constraints) {
           return GestureDetector(
             onTapUp: (details) => _onWebMapTapped(details, constraints),
-            child: _mapImageData != null
-                ? Image.memory(
-                    _mapImageData!,
+            child: _mapImageUrl != null
+                ? Image.network(
+                    _mapImageUrl!,
                     fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
                     errorBuilder: (context, error, stackTrace) {
                       Logger.error('지도 이미지 표시 실패', error: error);
                       return Center(
