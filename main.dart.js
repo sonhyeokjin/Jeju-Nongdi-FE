@@ -107218,7 +107218,7 @@ if(i==null){s=1
 break}p=4
 k=t.N
 s=7
-return A.r(A.bof(A.ir(i,0,null),A.a0(["X-NCP-APIGW-API-KEY-ID","lRAYqT9GbSjOJddjMZANYkZATyeukgPtmiu48KPx"],k,k)),$async$C_)
+return A.r(A.bof(A.ir(i,0,null),A.a0(["X-NCP-APIGW-API-KEY-ID","be8jif7owm"],k,k)),$async$C_)
 case 7:m=b
 if(m.b===200){n.M(new A.aFW(n,m))
 A.Z(B.v,"\uc9c0\ub3c4 \uc774\ubbf8\uc9c0 \ub85c\ub4dc \uc131\uacf5",null,null)}else{i=m
