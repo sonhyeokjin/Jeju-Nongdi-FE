@@ -106655,7 +106655,7 @@ s.ax=A.aVG(B.kg,new A.aFv(s))},
 l(){var s=this.ax
 if(s!=null)s.aT(0)
 this.ak()},
-JM(){var s=this,r="https://maps.apigw.ntruss.com/map-static/v2/raster?w=400&h=400&center="+A.e(s.Q)+","+A.e(s.z)+"&level="+s.as+"&X-NCP-APIGW-API-KEY-ID=be8jif7owm"
+JM(){var s=this,r="https://maps.apigw.ntruss.com/map-static/v2/raster-cors?w=400&h=400&center="+A.e(s.Q)+","+A.e(s.z)+"&level="+s.as+"&X-NCP-APIGW-API-KEY-ID=be8jif7owm"
 s.at=r
 A.a_(B.v,"\uc9c0\ub3c4 \uc774\ubbf8\uc9c0 URL \uc0dd\uc131: "+r,null,null)},
 Vz(){switch(this.as){case 9:return 0.5
