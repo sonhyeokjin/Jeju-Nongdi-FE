@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -37,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double _sheetExtent = 0.3;
 
   // 웹용 static API 관련 설정
-  static const String _naverApiKey = 'lRAYqT9GbSjOJddjMZANYkZATyeukgPtmiu48KPx';
+  static const String _naverApiKey = 'be8jif7owm';
   static const double _initialLat = 33.375;
   static const double _initialLng = 126.49;
   static const int _initialZoom = 11;
