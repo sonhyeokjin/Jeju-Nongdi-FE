@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:flutter_redux/flutter_redux.dart';
@@ -14,6 +15,7 @@ import 'package:jejunongdi/screens/ai_tips_screen.dart';
 import 'package:jejunongdi/screens/weather_dashboard_screen.dart';
 import 'package:jejunongdi/screens/price_monitoring_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'dart:math' as math;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // 공통 상태
   NaverMapController? _controller;
   final Set<NMarker> _markers = {};
   List<JobPostingResponse> _jobPostings = [];
@@ -31,24 +34,40 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   double _sheetExtent = 0.3;
 
+  // 웹용 static API 관련 설정
+  static const String _naverApiKey = 'lRAYqT9GbSjOJddjMZANYkZATyeukgPtmiu48KPx';
+  static const double _initialLat = 33.375;
+  static const double _initialLng = 126.49;
+  static const int _initialZoom = 11;
+  
+  double _currentLat = _initialLat;
+  double _currentLng = _initialLng;
+  int _currentZoom = _initialZoom;
+  String? _mapImageUrl;
+
   // [추가] 새로운 카드를 위한 상태 변수들
   Timer? _infoTimer;
   int _currentInfoIndex = 0;
   final List<String> _infoMessages = [
     "제주 당근은 지금이 제철이에요!",
     "한라봉 농장에서 일손을 구하고 있어요.",
-    "밭터오라에 새로운 농지가 등록되었어요.",
+    "밭터오라에 새로운 농지가 등록되었어요!",
     "서귀포에서 열리는 감귤 축제에 참여해보세요!",
   ];
 
-  static const NLatLng _initialPosition = NLatLng(33.375, 126.49);
+  static const NLatLng _initialPosition = NLatLng(_initialLat, _initialLng);
 
   @override
   void initState() {
     super.initState();
+    if (kIsWeb) {
+      _generateMapImageUrl();
+    }
+    _loadJobPostingsForCurrentView();
+    
     // [추가] 3초마다 메시지를 변경하는 타이머 설정
     _infoTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) { // 위젯이 화면에 있을 때만 상태 변경
+      if (mounted) {
         setState(() {
           _currentInfoIndex = (_currentInfoIndex + 1) % _infoMessages.length;
         });
@@ -63,6 +82,120 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // 웹용 static API 관련 메서드들
+  void _generateMapImageUrl() {
+    if (!kIsWeb) return;
+    
+    // 마커 오버레이를 위한 파라미터 생성
+    String markersParam = '';
+    if (_jobPostings.isNotEmpty) {
+      List<String> markerStrings = [];
+      for (int i = 0; i < math.min(_jobPostings.length, 50); i++) {
+        final job = _jobPostings[i];
+        markerStrings.add('${job.longitude},${job.latitude}');
+      }
+      if (markerStrings.isNotEmpty) {
+        markersParam = '&markers=${markerStrings.join('|')}';
+      }
+    }
+
+    _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?'
+        'w=400&h=400'
+        '&center=$_currentLng,$_currentLat'
+        '&level=$_currentZoom'
+        '$markersParam'
+        '&X-NCP-APIGW-API-KEY-ID=$_naverApiKey';
+    
+    Logger.info('지도 이미지 URL 생성: $_mapImageUrl');
+  }
+
+  double _getLatitudeRange() {
+    // 줌 레벨에 따른 위도 범위 계산 (근사치)
+    switch (_currentZoom) {
+      case 9: return 0.5;
+      case 10: return 0.25;
+      case 11: return 0.125;
+      case 12: return 0.0625;
+      case 13: return 0.03125;
+      case 14: return 0.015625;
+      case 15: return 0.0078125;
+      default: return 0.125;
+    }
+  }
+
+  double _getLongitudeRange() {
+    // 줌 레벨에 따른 경도 범위 계산 (근사치)
+    switch (_currentZoom) {
+      case 9: return 0.6;
+      case 10: return 0.3;
+      case 11: return 0.15;
+      case 12: return 0.075;
+      case 13: return 0.0375;
+      case 14: return 0.01875;
+      case 15: return 0.009375;
+      default: return 0.15;
+    }
+  }
+
+  void _onWebMapTapped(TapUpDetails details, BoxConstraints constraints) {
+    if (!kIsWeb) return;
+    
+    // 탭한 위치를 기준으로 근처의 일자리 찾기
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final localPosition = renderBox.globalToLocal(details.globalPosition);
+    
+    // 지도 영역 내에서의 상대적 위치 계산
+    final mapWidth = constraints.maxWidth;
+    final mapHeight = constraints.maxHeight;
+    
+    final relativeX = localPosition.dx / mapWidth;
+    final relativeY = localPosition.dy / mapHeight;
+    
+    // 상대적 위치를 실제 좌표로 변환
+    final latRange = _getLatitudeRange() * 2;
+    final lngRange = _getLongitudeRange() * 2;
+    
+    final tappedLat = _currentLat + (0.5 - relativeY) * latRange;
+    final tappedLng = _currentLng + (relativeX - 0.5) * lngRange;
+    
+    // 근처의 일자리 찾기 (100m 반경 내)
+    JobPostingResponse? nearestJob;
+    double minDistance = double.infinity;
+    
+    for (final job in _jobPostings) {
+      final distance = _calculateDistance(
+        tappedLat, tappedLng, 
+        job.latitude, job.longitude
+      );
+      
+      if (distance < 0.001 && distance < minDistance) { // 100m 이내
+        minDistance = distance;
+        nearestJob = job;
+      }
+    }
+    
+    if (nearestJob != null) {
+      final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
+          .state
+          .userState
+          .isAuthenticated;
+
+      if (isAuthenticated) {
+        _showJobPostingDetails(nearestJob);
+      } else {
+        _showLoginRequiredDialog();
+      }
+    }
+  }
+
+  double _calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+    // 두 지점 간의 거리 계산 (단순한 유클리드 거리)
+    final deltaLat = lat1 - lat2;
+    final deltaLng = lng1 - lng2;
+    return math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng);
+  }
+
+  // 기존 NaverMap 관련 메서드들
   void _onMapReady(NaverMapController controller) {
     _controller = controller;
     Logger.info('네이버 지도 초기화 완료');
@@ -82,21 +215,52 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadJobPostingsForCurrentView() async {
-    if (!mounted || _controller == null) return;
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
+    
     try {
-      final bounds = await _controller!.getContentBounds();
-      Logger.info('현재 지도 범위: ${bounds.southWest} ~ ${bounds.northEast}');
+      double minLat, maxLat, minLng, maxLng;
+      
+      if (kIsWeb) {
+        // 웹: 현재 지도 범위 계산 (대략적)
+        double latRange = _getLatitudeRange();
+        double lngRange = _getLongitudeRange();
+        
+        minLat = _currentLat - latRange;
+        maxLat = _currentLat + latRange;
+        minLng = _currentLng - lngRange;
+        maxLng = _currentLng + lngRange;
+      } else {
+        // 앱: NaverMapController에서 bounds 가져오기
+        if (_controller == null) return;
+        final bounds = await _controller!.getContentBounds();
+        Logger.info('현재 지도 범위: ${bounds.southWest} ~ ${bounds.northEast}');
+        
+        minLat = bounds.southWest.latitude;
+        maxLat = bounds.northEast.latitude;
+        minLng = bounds.southWest.longitude;
+        maxLng = bounds.northEast.longitude;
+      }
+      
       final result = await _jobPostingService.getJobPostingsByBounds(
-        minLat: bounds.southWest.latitude,
-        maxLat: bounds.northEast.latitude,
-        minLng: bounds.southWest.longitude,
-        maxLng: bounds.northEast.longitude,
+        minLat: minLat,
+        maxLat: maxLat,
+        minLng: minLng,
+        maxLng: maxLng,
       );
+      
       if (result.isSuccess && mounted) {
-        await _updateMarkers(result.data!);
+        setState(() {
+          _jobPostings = result.data!;
+        });
+        
+        if (kIsWeb) {
+          _generateMapImageUrl();
+        } else {
+          await _updateMarkers(result.data!);
+        }
       } else if (result.isFailure && mounted) {
         final errorMsg = result.error?.message ?? "알 수 없는 오류";
         _showErrorSnackBar('데이터를 불러오는데 실패했습니다: $errorMsg');
@@ -116,7 +280,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _updateMarkers(List<JobPostingResponse> jobPostings) async {
-    if (_controller == null) return;
+    if (_controller == null || kIsWeb) return;
+    
     try {
       await _controller!.clearOverlays();
       _markers.clear();
@@ -135,10 +300,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
 
-          // ===================================================================
-          // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 부분이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-          // ===================================================================
-          // 마커 클릭 이벤트에 로그인 상태 확인 로직 추가
           marker.setOnTapListener((NMarker marker) {
             final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
                 .state
@@ -146,10 +307,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 .isAuthenticated;
 
             if (isAuthenticated) {
-              // 로그인 상태이면, 상세 정보 시트를 보여줍니다.
               _showJobPostingDetails(jobPosting);
             } else {
-              // 로그아웃 상태이면, 로그인 안내 다이얼로그를 보여줍니다.
               _showLoginRequiredDialog();
             }
           });
@@ -160,9 +319,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Logger.error('마커 생성 실패: ${jobPosting.id}', error: e);
         }
       }
-      setState(() {
-        _jobPostings = jobPostings;
-      });
       Logger.info('마커 업데이트 완료: ${jobPostings.length}개');
     } catch (e) {
       Logger.error('마커 업데이트 실패', error: e);
@@ -180,7 +336,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // [수정] 로그인 필요 안내 다이얼로그 함수 추가
   void _showLoginRequiredDialog() {
     showDialog(
       context: context,
@@ -194,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(dialogContext).pop(); // 다이얼로그 닫기
+              Navigator.of(dialogContext).pop();
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
@@ -222,15 +377,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _moveToJejuCenter() {
-    if (_controller != null) {
-      _controller!.updateCamera(
-        NCameraUpdate.fromCameraPosition(
-          const NCameraPosition(
-            target: _initialPosition,
-            zoom: 11.0,
+    if (kIsWeb) {
+      setState(() {
+        _currentLat = _initialLat;
+        _currentLng = _initialLng;
+        _currentZoom = _initialZoom;
+      });
+      _generateMapImageUrl();
+      _loadJobPostingsForCurrentView();
+    } else {
+      if (_controller != null) {
+        _controller!.updateCamera(
+          NCameraUpdate.fromCameraPosition(
+            const NCameraPosition(
+              target: _initialPosition,
+              zoom: 11.0,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -249,21 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned.fill(
               child: IgnorePointer(
                 ignoring: _sheetExtent > 0.8,
-                child: NaverMap(
-                  options: const NaverMapViewOptions(
-                    initialCameraPosition: NCameraPosition(
-                      target: _initialPosition,
-                      zoom: 11.0,
-                    ),
-                    mapType: NMapType.basic,
-                    activeLayerGroups: [NLayerGroup.building, NLayerGroup.traffic],
-                    locationButtonEnable: true,
-                    consumeSymbolTapEvents: false,
-                  ),
-                  onMapReady: _onMapReady,
-                  onCameraChange: _onCameraChange,
-                  onCameraIdle: _onCameraIdle,
-                ),
+                child: kIsWeb ? _buildWebMap() : _buildNativeMap(),
               ),
             ),
             SafeArea(
@@ -381,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             // [추가] 돌하르방 정보 카드
             Positioned(
-              top: 190, // 기존 카드보다 아래에 위치하도록 top 값 조절
+              top: 190,
               left: 16,
               right: 16,
               child: Card(
@@ -391,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      const Text('🗿', style: TextStyle(fontSize: 24)), // 돌하르방 아이콘
+                      const Text('🗿', style: TextStyle(fontSize: 24)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: AnimatedSwitcher(
@@ -401,7 +552,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                           child: Text(
                             _infoMessages[_currentInfoIndex],
-                            key: ValueKey<int>(_currentInfoIndex), // 키를 변경하여 위젯을 새로 그리도록 함
+                            key: ValueKey<int>(_currentInfoIndex),
                             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                           ),
                         ),
@@ -718,14 +869,72 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildNativeMap() {
+    return NaverMap(
+      options: const NaverMapViewOptions(
+        initialCameraPosition: NCameraPosition(
+          target: _initialPosition,
+          zoom: 11.0,
+        ),
+        mapType: NMapType.basic,
+        activeLayerGroups: [NLayerGroup.building, NLayerGroup.traffic],
+        locationButtonEnable: true,
+        consumeSymbolTapEvents: false,
+      ),
+      onMapReady: _onMapReady,
+      onCameraChange: _onCameraChange,
+      onCameraIdle: _onCameraIdle,
+    );
+  }
+
+  Widget _buildWebMap() {
+    return Container(
+      color: Colors.grey[300],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return GestureDetector(
+            onTapUp: (details) => _onWebMapTapped(details, constraints),
+            child: _mapImageUrl != null
+                ? Image.network(
+                    _mapImageUrl!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error, size: 64, color: Colors.red),
+                            SizedBox(height: 16),
+                            Text('지도를 불러올 수 없습니다'),
+                          ],
+                        ),
+                      );
+                    },
+                  )
+                : const Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
+    );
+  }
+
   void _showWorkerRecruit() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const JobPostingCreateScreen(),
       ),
     ).then((success) {
-      // 등록 성공 후 돌아왔을 때 (true가 반환된 경우)
-      // 지도 데이터를 새로고침합니다.
       if (success == true) {
         _loadJobPostingsForCurrentView();
       }
