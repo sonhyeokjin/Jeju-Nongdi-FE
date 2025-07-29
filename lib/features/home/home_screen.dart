@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -41,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _initialLat = 33.375;
   static const double _initialLng = 126.49;
   static const int _initialZoom = 11;
-  
+
   double _currentLat = _initialLat;
   double _currentLng = _initialLng;
   int _currentZoom = _initialZoom;
@@ -66,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _generateMapImageUrl();
     }
     _loadJobPostingsForCurrentView();
-    
+
     // [추가] 3초마다 메시지를 변경하는 타이머 설정
     _infoTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
@@ -87,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // 웹용 static API 관련 메서드들
   void _generateMapImageUrl() {
     if (!kIsWeb) return;
-    
+
     // 마커 오버레이를 위한 파라미터 생성
     String markersParam = '';
     if (_jobPostings.isNotEmpty) {
@@ -101,39 +99,14 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    setState(() {
-      _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?'
-          'w=400&h=400'
-          '&center=$_currentLng,$_currentLat'
-          '&level=$_currentZoom'
-          '$markersParam'
-          '&X-NCP-APIGW-API-KEY-ID=$_naverApiKey';
-    });
-    
+    _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?'
+        'w=400&h=400'
+        '&center=$_currentLng,$_currentLat'
+        '&level=$_currentZoom'
+        '$markersParam'
+        '&X-NCP-APIGW-API-KEY-ID=$_naverApiKey';
+
     Logger.info('지도 이미지 URL 생성: $_mapImageUrl');
-    _createHtmlMapImage();
-  }
-
-  void _createHtmlMapImage() {
-    if (!kIsWeb || _mapImageUrl == null) return;
-
-    // HTML img 태그 생성
-    final imgElement = html.ImageElement()
-      ..src = _mapImageUrl!
-      ..style.width = '100%'
-      ..style.height = '100%'
-      ..style.objectFit = 'cover';
-
-    // HTML 요소를 Flutter에서 사용할 수 있도록 등록
-    final viewId = 'map-image-${DateTime.now().millisecondsSinceEpoch}';
-    ui_web.platformViewRegistry.registerViewFactory(
-      viewId,
-      (int viewId) => imgElement,
-    );
-
-    setState(() {
-      _mapImageUrl = viewId; // viewId를 저장해서 HtmlElementView에서 사용
-    });
   }
 
   double _getLatitudeRange() {
@@ -166,41 +139,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onWebMapTapped(TapUpDetails details, BoxConstraints constraints) {
     if (!kIsWeb) return;
-    
+
     // 탭한 위치를 기준으로 근처의 일자리 찾기
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final localPosition = renderBox.globalToLocal(details.globalPosition);
-    
+
     // 지도 영역 내에서의 상대적 위치 계산
     final mapWidth = constraints.maxWidth;
     final mapHeight = constraints.maxHeight;
-    
+
     final relativeX = localPosition.dx / mapWidth;
     final relativeY = localPosition.dy / mapHeight;
-    
+
     // 상대적 위치를 실제 좌표로 변환
     final latRange = _getLatitudeRange() * 2;
     final lngRange = _getLongitudeRange() * 2;
-    
+
     final tappedLat = _currentLat + (0.5 - relativeY) * latRange;
     final tappedLng = _currentLng + (relativeX - 0.5) * lngRange;
-    
+
     // 근처의 일자리 찾기 (100m 반경 내)
     JobPostingResponse? nearestJob;
     double minDistance = double.infinity;
-    
+
     for (final job in _jobPostings) {
       final distance = _calculateDistance(
-        tappedLat, tappedLng, 
-        job.latitude, job.longitude
+          tappedLat, tappedLng,
+          job.latitude, job.longitude
       );
-      
+
       if (distance < 0.001 && distance < minDistance) { // 100m 이내
         minDistance = distance;
         nearestJob = job;
       }
     }
-    
+
     if (nearestJob != null) {
       final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
           .state
@@ -246,15 +219,15 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       double minLat, maxLat, minLng, maxLng;
-      
+
       if (kIsWeb) {
         // 웹: 현재 지도 범위 계산 (대략적)
         double latRange = _getLatitudeRange();
         double lngRange = _getLongitudeRange();
-        
+
         minLat = _currentLat - latRange;
         maxLat = _currentLat + latRange;
         minLng = _currentLng - lngRange;
@@ -264,25 +237,25 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_controller == null) return;
         final bounds = await _controller!.getContentBounds();
         Logger.info('현재 지도 범위: ${bounds.southWest} ~ ${bounds.northEast}');
-        
+
         minLat = bounds.southWest.latitude;
         maxLat = bounds.northEast.latitude;
         minLng = bounds.southWest.longitude;
         maxLng = bounds.northEast.longitude;
       }
-      
+
       final result = await _jobPostingService.getJobPostingsByBounds(
         minLat: minLat,
         maxLat: maxLat,
         minLng: minLng,
         maxLng: maxLng,
       );
-      
+
       if (result.isSuccess && mounted) {
         setState(() {
           _jobPostings = result.data!;
         });
-        
+
         if (kIsWeb) {
           _generateMapImageUrl();
         } else {
@@ -308,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _updateMarkers(List<JobPostingResponse> jobPostings) async {
     if (_controller == null || kIsWeb) return;
-    
+
     try {
       await _controller!.clearOverlays();
       _markers.clear();
@@ -922,22 +895,34 @@ class _HomeScreenState extends State<HomeScreen> {
           return GestureDetector(
             onTapUp: (details) => _onWebMapTapped(details, constraints),
             child: _mapImageUrl != null
-                ? HtmlElementView(
-                    viewType: _mapImageUrl!,
-                    onPlatformViewCreated: (id) {
-                      Logger.info('HTML 지도 이미지 생성 완료');
-                    },
-                  )
-                : const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('지도를 불러오는 중...'),
-                      ],
-                    ),
+                ? Image.network(
+              _mapImageUrl!,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                        : null,
                   ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error, size: 64, color: Colors.red),
+                      SizedBox(height: 16),
+                      Text('지도를 불러올 수 없습니다'),
+                    ],
+                  ),
+                );
+              },
+            )
+                : const Center(child: CircularProgressIndicator()),
           );
         },
       ),
