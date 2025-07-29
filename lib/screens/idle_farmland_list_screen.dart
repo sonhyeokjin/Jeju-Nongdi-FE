@@ -237,19 +237,27 @@ class _IdleFarmlandListScreenState extends State<IdleFarmlandListScreen>
                   end: Offset.zero,
                 ).animate(CurvedAnimation(
                   parent: _slideController,
-                  curve: Interval(
-                    (index * 0.1).clamp(0.0, 1.0),
-                    ((index * 0.1) + 0.5).clamp(0.0, 1.0),
-                    curve: Curves.easeOutCubic,
-                  ),
+                  curve: (() {
+                    final begin = (index * 0.1).clamp(0.0, 1.0);
+                    final end = ((index * 0.1) + 0.5).clamp(0.0, 1.0);
+                    return Interval(
+                      begin,
+                      end > begin ? end : begin + 0.01,
+                      curve: Curves.easeOutCubic,
+                    );
+                  })(),
                 )),
                 child: FadeTransition(
                   opacity: CurvedAnimation(
                     parent: _fadeController,
-                    curve: Interval(
-                      (index * 0.1).clamp(0.0, 1.0),
-                      ((index * 0.1) + 0.3).clamp(0.0, 1.0),
-                    ),
+                    curve: (() {
+                      final begin = (index * 0.1).clamp(0.0, 1.0);
+                      final end = ((index * 0.1) + 0.3).clamp(0.0, 1.0);
+                      return Interval(
+                        begin,
+                        end > begin ? end : begin + 0.01,
+                      );
+                    })(),
                   ),
                   child: _FarmlandCard(farmland: farmland),
                 ),
@@ -280,6 +288,7 @@ class _IdleFarmlandListScreenState extends State<IdleFarmlandListScreen>
         ],
       ),
       child: FloatingActionButton(
+        heroTag: "idle_farmland_fab",
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => const IdleFarmlandCreateScreen()),

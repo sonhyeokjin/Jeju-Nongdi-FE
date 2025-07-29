@@ -524,9 +524,11 @@ class SignupScreenState extends State<SignupScreen>
     return AnimatedBuilder(
       animation: _staggerController,
       builder: (context, child) {
+        final begin = (index * 0.1).clamp(0.0, 1.0);
+        final end = ((index * 0.1) + 0.7).clamp(0.0, 1.0);
         final interval = Interval(
-          (index * 0.1).clamp(0.0, 1.0),
-          ((index * 0.1) + 0.7).clamp(0.0, 1.0),
+          begin,
+          end > begin ? end : begin + 0.01,
           curve: Curves.easeOutCubic,
         );
         

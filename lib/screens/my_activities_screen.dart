@@ -140,6 +140,7 @@ class _MyActivitiesScreenState extends State<MyActivitiesScreen> {
       backgroundColor: const Color(0xFFF8F9FA),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
+        heroTag: "my_activities_fab",
         onPressed: () {
           // TODO: 멘토링 생성 페이지로 이동
           ScaffoldMessenger.of(context).showSnackBar(

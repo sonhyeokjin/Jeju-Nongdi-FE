@@ -2,31 +2,51 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'user_preference_models.g.dart';
 
-/// 사용자 농업 개인화 설정 모델
+/// 사용자 농업 개인화 설정 모델 (API 명세서 기준)
 @JsonSerializable()
 class UserPreferenceDto {
   final int? id;
-  final int userId;
-  final String? farmingType;
-  final List<String>? interestedCrops;
-  final String? farmSize;
+  @JsonKey(name: 'userId')
+  final int? userId;
+  @JsonKey(name: 'primaryCrops')
+  final List<String>? primaryCrops;
+  @JsonKey(name: 'farmLocation')
   final String? farmLocation;
-  final String? experienceLevel;
-  final Map<String, dynamic>? weatherSettings;
-  final Map<String, dynamic>? notificationSettings;
+  @JsonKey(name: 'farmSize')
+  final double? farmSize;
+  @JsonKey(name: 'farmingExperience')
+  final int? farmingExperience;
+  @JsonKey(name: 'notificationWeather')
+  final bool? notificationWeather;
+  @JsonKey(name: 'notificationPest')
+  final bool? notificationPest;
+  @JsonKey(name: 'notificationMarket')
+  final bool? notificationMarket;
+  @JsonKey(name: 'notificationLabor')
+  final bool? notificationLabor;
+  @JsonKey(name: 'preferredTipTime')
+  final String? preferredTipTime;
+  @JsonKey(name: 'farmingType')
+  final String? farmingType;
+  @JsonKey(name: 'farmingTypeDescription')
+  final String? farmingTypeDescription;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
   const UserPreferenceDto({
     this.id,
-    required this.userId,
-    this.farmingType,
-    this.interestedCrops,
-    this.farmSize,
+    this.userId,
+    this.primaryCrops,
     this.farmLocation,
-    this.experienceLevel,
-    this.weatherSettings,
-    this.notificationSettings,
+    this.farmSize,
+    this.farmingExperience,
+    this.notificationWeather,
+    this.notificationPest,
+    this.notificationMarket,
+    this.notificationLabor,
+    this.preferredTipTime,
+    this.farmingType,
+    this.farmingTypeDescription,
     this.createdAt,
     this.updatedAt,
   });
@@ -40,23 +60,17 @@ class UserPreferenceDto {
   factory UserPreferenceDto.createDefault(int userId) {
     return UserPreferenceDto(
       userId: userId,
-      farmingType: '일반농업',
-      interestedCrops: ['감귤'],
-      farmSize: '소규모',
+      farmingType: 'CONVENTIONAL',
+      farmingTypeDescription: '일반농업',
+      primaryCrops: ['감귤'],
+      farmSize: 1000.0, // 1000㎡
       farmLocation: '제주도',
-      experienceLevel: '초급',
-      weatherSettings: {
-        'enableWeatherAlerts': true,
-        'temperatureUnit': 'celsius',
-        'precipitationUnit': 'mm',
-      },
-      notificationSettings: {
-        'enablePushNotifications': true,
-        'enableEmailNotifications': false,
-        'enableSMSNotifications': false,
-        'notificationHours': [9, 18], // 오전 9시, 오후 6시
-        'weekendNotifications': true,
-      },
+      farmingExperience: 1, // 1년
+      notificationWeather: true,
+      notificationPest: true,
+      notificationMarket: false,
+      notificationLabor: true,
+      preferredTipTime: 'MORNING', // 오전
     );
   }
 
@@ -64,30 +78,57 @@ class UserPreferenceDto {
   UserPreferenceDto copyWith({
     int? id,
     int? userId,
-    String? farmingType,
-    List<String>? interestedCrops,
-    String? farmSize,
+    List<String>? primaryCrops,
     String? farmLocation,
-    String? experienceLevel,
-    Map<String, dynamic>? weatherSettings,
-    Map<String, dynamic>? notificationSettings,
+    double? farmSize,
+    int? farmingExperience,
+    bool? notificationWeather,
+    bool? notificationPest,
+    bool? notificationMarket,
+    bool? notificationLabor,
+    String? preferredTipTime,
+    String? farmingType,
+    String? farmingTypeDescription,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return UserPreferenceDto(
       id: id ?? this.id,
       userId: userId ?? this.userId,
-      farmingType: farmingType ?? this.farmingType,
-      interestedCrops: interestedCrops ?? this.interestedCrops,
-      farmSize: farmSize ?? this.farmSize,
+      primaryCrops: primaryCrops ?? this.primaryCrops,
       farmLocation: farmLocation ?? this.farmLocation,
-      experienceLevel: experienceLevel ?? this.experienceLevel,
-      weatherSettings: weatherSettings ?? this.weatherSettings,
-      notificationSettings: notificationSettings ?? this.notificationSettings,
+      farmSize: farmSize ?? this.farmSize,
+      farmingExperience: farmingExperience ?? this.farmingExperience,
+      notificationWeather: notificationWeather ?? this.notificationWeather,
+      notificationPest: notificationPest ?? this.notificationPest,
+      notificationMarket: notificationMarket ?? this.notificationMarket,
+      notificationLabor: notificationLabor ?? this.notificationLabor,
+      preferredTipTime: preferredTipTime ?? this.preferredTipTime,
+      farmingType: farmingType ?? this.farmingType,
+      farmingTypeDescription: farmingTypeDescription ?? this.farmingTypeDescription,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+}
+
+/// 농업 유형 정보 모델 (API 명세서 기준)
+@JsonSerializable()
+class FarmingTypeInfo {
+  final String code;
+  final String name;
+  final String description;
+
+  const FarmingTypeInfo({
+    required this.code,
+    required this.name,
+    required this.description,
+  });
+
+  factory FarmingTypeInfo.fromJson(Map<String, dynamic> json) =>
+      _$FarmingTypeInfoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FarmingTypeInfoToJson(this);
 }
 
 /// 농업 유형 enum

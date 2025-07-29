@@ -7,6 +7,7 @@ import 'package:jejunongdi/redux/user/user_actions.dart';
 import 'package:jejunongdi/redux/user/user_state.dart';
 import 'package:jejunongdi/redux/user/user_model.dart';
 import 'package:jejunongdi/screens/my_mentoring_list_screen.dart';
+import 'package:jejunongdi/screens/user_preference_screen.dart';
 
 /// 동적인 AppBar와 확장된 레이아웃이 적용된 새로운 마이페이지 화면입니다.
 class MyPageScreen extends StatefulWidget {
@@ -41,19 +42,23 @@ class _MyPageScreenState extends State<MyPageScreen> with TickerProviderStateMix
 
     final itemCount = 3;
     _fadeAnimations = List.generate(itemCount, (index) {
+      final begin = (0.1 * index).clamp(0.0, 1.0);
+      final end = (0.5 + 0.1 * index).clamp(0.0, 1.0);
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _staggerController,
-          curve: Interval(0.1 * index, 0.5 + 0.1 * index, curve: Curves.easeOutCubic),
+          curve: Interval(begin, end > begin ? end : begin + 0.01, curve: Curves.easeOutCubic),
         ),
       );
     });
 
     _slideAnimations = List.generate(itemCount, (index) {
+      final begin = (0.1 * index).clamp(0.0, 1.0);
+      final end = (0.5 + 0.1 * index).clamp(0.0, 1.0);
       return Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
         CurvedAnimation(
           parent: _staggerController,
-          curve: Interval(0.1 * index, 0.5 + 0.1 * index, curve: Curves.easeOutCubic),
+          curve: Interval(begin, end > begin ? end : begin + 0.01, curve: Curves.easeOutCubic),
         ),
       );
     });
@@ -180,6 +185,13 @@ class _MyPageScreenState extends State<MyPageScreen> with TickerProviderStateMix
                         child: _buildAnimatedItem(index: 2, child: _buildMenuGroup(
                           title: '기타',
                           children: [
+                            _buildMenuTile(context, icon: FontAwesomeIcons.cog, title: '사용자 설정', onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const UserPreferenceScreen(),
+                                ),
+                              );
+                            }),
                             _buildMenuTile(context, icon: FontAwesomeIcons.bell, title: '알림 설정', onTap: () {}),
                             _buildMenuTile(context, icon: FontAwesomeIcons.circleInfo, title: '앱 정보', onTap: () => _showAppInfoDialog(context)),
                             _buildMenuTile(context, icon: FontAwesomeIcons.rightFromBracket, title: '로그아웃', onTap: () => _showLogoutDialog(context), color: Colors.redAccent),

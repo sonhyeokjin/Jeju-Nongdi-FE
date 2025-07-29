@@ -254,9 +254,11 @@ class _MentoringListScreenState extends State<MentoringListScreen>
 
   Widget _buildAnimatedMentoringCard(MentoringResponse mentoring, int index) {
     // Staggered Animation 설정
+    final begin = (index * 0.08).clamp(0.0, 1.0);
+    final end = ((index * 0.08) + 0.5).clamp(0.0, 1.0);
     final interval = Interval(
-      (index * 0.08).clamp(0.0, 1.0),
-      ((index * 0.08) + 0.5).clamp(0.0, 1.0),
+      begin,
+      end > begin ? end : begin + 0.01,
       curve: Curves.easeOutBack,
     );
 
@@ -681,6 +683,7 @@ class _MentoringListScreenState extends State<MentoringListScreen>
         ],
       ),
       child: FloatingActionButton.extended(
+        heroTag: "mentoring_list_fab",
         onPressed: () async {
           final result = await Navigator.of(context).push<bool>(
             MaterialPageRoute(builder: (context) => const MentoringCreateScreen()),

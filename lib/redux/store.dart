@@ -12,6 +12,8 @@ import 'package:jejunongdi/redux/idle_farmland/idle_farmland_reducer.dart';
 import 'package:jejunongdi/redux/idle_farmland/idle_farmland_middleware.dart';
 import 'package:jejunongdi/redux/job_posting/job_posting_reducer.dart';
 import 'package:jejunongdi/redux/job_posting/job_posting_middleware.dart';
+import 'package:jejunongdi/redux/user_preference/user_preference_reducer.dart';
+import 'package:jejunongdi/redux/user_preference/user_preference_middleware.dart';
 
 // Root Reducer - 앱 전체 상태 관리
 AppState appReducer(AppState state, dynamic action) {
@@ -19,6 +21,7 @@ AppState appReducer(AppState state, dynamic action) {
     userState: userStateReducer(state.userState, action),
     mentoringState: mentoringReducer(state.mentoringState, action),
     chatState: chatReducer(state.chatState, action),
+    userPreferenceState: userPreferenceReducer(state.userPreferenceState, action),
     idleFarmlandState: idleFarmlandReducer(state.idleFarmlandState, action),
     jobPostingState: jobPostingReducer(state.jobPostingState, action),
   );
@@ -39,6 +42,7 @@ Store<AppState> createStore() {
   middleware.addAll(createUserMiddleware());
   middleware.addAll(MentoringMiddleware.createMiddleware());
   middleware.addAll(createChatMiddleware());
+  middleware.addAll(UserPreferenceMiddleware.createMiddleware());
   middleware.addAll(createIdleFarmlandMiddleware());
   // middleware.add(apiMiddleware);
   // middleware.add(storageMiddleware);
