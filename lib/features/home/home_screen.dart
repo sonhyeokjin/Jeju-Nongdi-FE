@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -109,6 +111,29 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     
     Logger.info('지도 이미지 URL 생성: $_mapImageUrl');
+    _createHtmlMapImage();
+  }
+
+  void _createHtmlMapImage() {
+    if (!kIsWeb || _mapImageUrl == null) return;
+
+    // HTML img 태그 생성
+    final imgElement = html.ImageElement()
+      ..src = _mapImageUrl!
+      ..style.width = '100%'
+      ..style.height = '100%'
+      ..style.objectFit = 'cover';
+
+    // HTML 요소를 Flutter에서 사용할 수 있도록 등록
+    final viewId = 'map-image-${DateTime.now().millisecondsSinceEpoch}';
+    ui_web.platformViewRegistry.registerViewFactory(
+      viewId,
+      (int viewId) => imgElement,
+    );
+
+    setState(() {
+      _mapImageUrl = viewId; // viewId를 저장해서 HtmlElementView에서 사용
+    });
   }
 
   double _getLatitudeRange() {
@@ -897,34 +922,10 @@ class _HomeScreenState extends State<HomeScreen> {
           return GestureDetector(
             onTapUp: (details) => _onWebMapTapped(details, constraints),
             child: _mapImageUrl != null
-                ? Image.network(
-                    _mapImageUrl!,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      Logger.error('지도 이미지 표시 실패', error: error);
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error, size: 64, color: Colors.red),
-                            const SizedBox(height: 16),
-                            const Text('지도를 불러올 수 없습니다'),
-                            const SizedBox(height: 8),
-                            Text('오류: $error', style: const TextStyle(fontSize: 12)),
-                          ],
-                        ),
-                      );
+                ? HtmlElementView(
+                    viewType: _mapImageUrl!,
+                    onPlatformViewCreated: (id) {
+                      Logger.info('HTML 지도 이미지 생성 완료');
                     },
                   )
                 : const Center(
