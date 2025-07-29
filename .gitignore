@@ -9,6 +9,11 @@
 .pub/
 build/
 
+# Generated files (code generation)
+**/*.g.dart
+**/*.freezed.dart
+**/*.gr.dart
+
 # Flutter build outputs
 **/doc/api/
 **/ios/Flutter/.last_build_id

@@ -33,6 +33,12 @@ class UserPreferenceService {
     } catch (e) {
       Logger.error('내 설정 조회 실패', error: e);
       if (e is ApiException) {
+        // 404 에러인 경우 기본 설정을 생성하여 반환
+        if (e is NotFoundException) {
+          Logger.info('설정이 없어서 기본 설정을 생성합니다.');
+          final defaultPreference = UserPreferenceDto.createDefault(0); // userId는 0으로 임시 설정
+          return ApiResult.success(defaultPreference);
+        }
         return ApiResult.failure(e);
       } else {
         return ApiResult.failure(UnknownException('설정 조회 중 오류가 발생했습니다: $e'));
@@ -183,14 +189,26 @@ class UserPreferenceService {
   /// 설정 유효성을 검사합니다.
   bool validatePreference(UserPreferenceDto preference) {
     // 필수 필드 검사
-    if (preference.userId <= 0) {
+    if (preference.userId != null && preference.userId! <= 0) {
       Logger.warning('유효하지 않은 사용자 ID: ${preference.userId}');
       return false;
     }
     
-    // 관심 작물이 너무 많은지 검사 (최대 10개)
-    if (preference.interestedCrops != null && preference.interestedCrops!.length > 10) {
-      Logger.warning('관심 작물이 너무 많습니다: ${preference.interestedCrops!.length}개');
+    // 주요 작물이 너무 많은지 검사 (최대 10개)
+    if (preference.primaryCrops != null && preference.primaryCrops!.length > 10) {
+      Logger.warning('주요 작물이 너무 많습니다: ${preference.primaryCrops!.length}개');
+      return false;
+    }
+    
+    // 농장 크기 검사 (최소 1㎡ 이상)
+    if (preference.farmSize != null && preference.farmSize! <= 0) {
+      Logger.warning('유효하지 않은 농장 크기: ${preference.farmSize}㎡');
+      return false;
+    }
+    
+    // 농업 경험 검사 (최소 0년 이상)
+    if (preference.farmingExperience != null && preference.farmingExperience! < 0) {
+      Logger.warning('유효하지 않은 농업 경험: ${preference.farmingExperience}년');
       return false;
     }
     
@@ -199,7 +217,7 @@ class UserPreferenceService {
   }
 
   /// 농업 유형 목록을 조회합니다.
-  Future<ApiResult<List<Map<String, dynamic>>>> getFarmingTypes() async {
+  Future<ApiResult<List<FarmingTypeInfo>>> getFarmingTypes() async {
     try {
       Logger.info('농업 유형 목록 조회 시도');
       
@@ -208,7 +226,9 @@ class UserPreferenceService {
       );
       
       if (response.data != null) {
-        final farmingTypes = response.data!.cast<Map<String, dynamic>>();
+        final farmingTypes = response.data!
+            .map((json) => FarmingTypeInfo.fromJson(json as Map<String, dynamic>))
+            .toList();
         Logger.info('농업 유형 목록 조회 성공: ${farmingTypes.length}개');
         return ApiResult.success(farmingTypes);
       } else {
