@@ -306,7 +306,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
@@ -318,12 +317,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           )
                         ],
                       ),
-                      child: const Text(
-                        '밭터오라🍊',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          color: Color(0xFFF2711C),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Image.asset(
+                          'lib/assets/images/dol_hareubang_emti.png',
+                          height: 32,
+                          width: 32,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
