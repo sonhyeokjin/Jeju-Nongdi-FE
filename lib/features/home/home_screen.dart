@@ -74,6 +74,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // 기존 NaverMap 관련 메서드들
+  void _onWebMarkerClick(JobPostingResponse jobPosting) {
+    final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
+        .state
+        .userState
+        .isAuthenticated;
+
+    if (isAuthenticated) {
+      _showJobPostingDetails(jobPosting);
+    } else {
+      _showLoginRequiredDialog();
+    }
+  }
   void _onMapReady(NaverMapController controller) {
     _controller = controller;
     Logger.info('네이버 지도 초기화 완료');
@@ -758,47 +770,115 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWebMap() {
+    if (kIsWeb) {
+      return _buildSimpleWebMap();
+    } else {
+      return Container(); // 웹이 아닐 때는 빈 컨테이너
+    }
+  }
+
+  Widget _buildSimpleWebMap() {
+    // iframe 스타일의 간단한 웹 지도
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
           children: [
-            Icon(
-              Icons.map,
-              size: 64,
-              color: Colors.grey[600],
+            // Static Map 이미지
+            Image.network(
+              'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?w=800&h=600&center=126.49,33.375&level=11&X-NCP-APIGW-API-KEY-ID=be8jif7owm',
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error, size: 48, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('지도를 불러올 수 없습니다'),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 16),
-            Text(
-              '웹 지도',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '제주도 전체 일자리 정보',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_jobPostings.isNotEmpty)
-              Text(
-                '${_jobPostings.length}개의 일자리',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: const Color(0xFFF2711C),
-                  fontWeight: FontWeight.w600,
+            // 좌상단 로고
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'NAVER',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
                 ),
               ),
+            ),
+            // 우하단 정보
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '일자리: ${_jobPostings.length}개',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFF2711C),
+                  ),
+                ),
+              ),
+            ),
+            // 클릭 가능한 영역
+            Positioned.fill(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    // 지도 클릭 시 새로고침
+                    _loadJobPostingsForCurrentView();
+                  },
+                  child: Container(),
+                ),
+              ),
+            ),
           ],
         ),
       ),
