@@ -105,7 +105,8 @@ class _HomeScreenState extends State<HomeScreen> {
         'w=400&h=400'
         '&center=$_currentLng,$_currentLat'
         '&level=$_currentZoom'
-        '$markersParam';
+        '$markersParam'
+        '&X-NCP-APIGW-API-KEY-ID=$_naverApiKey';
     
     Logger.info('지도 이미지 URL 생성: $_mapImageUrl');
     _loadMapImage();
@@ -115,12 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!kIsWeb || _mapImageUrl == null) return;
 
     try {
-      final response = await http.get(
-        Uri.parse(_mapImageUrl!),
-        headers: {
-          'X-NCP-APIGW-API-KEY-ID': _naverApiKey,
-        },
-      );
+      final response = await http.get(Uri.parse(_mapImageUrl!));
 
       if (response.statusCode == 200) {
         setState(() {
