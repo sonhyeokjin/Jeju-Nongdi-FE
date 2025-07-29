@@ -17,6 +17,11 @@ import 'package:jejunongdi/screens/price_monitoring_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'dart:math' as math;
 
+// 조건부 import
+import 'dart:js' as js if (dart.library.html);
+import 'dart:ui_web' as ui_web if (dart.library.html);
+import 'dart:html' as html if (dart.library.html);
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -34,16 +39,13 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   double _sheetExtent = 0.3;
 
-  // 웹용 static API 관련 설정
-  static const String _naverApiKey = 'be8jif7owm';
+  // 웹용 JavaScript API 관련 설정
   static const double _initialLat = 33.375;
   static const double _initialLng = 126.49;
   static const int _initialZoom = 11;
-
-  double _currentLat = _initialLat;
-  double _currentLng = _initialLng;
-  int _currentZoom = _initialZoom;
-  String? _mapImageUrl;
+  
+  String? _webMapElementId;
+  js.JsObject? _webMap;
 
   // [추가] 새로운 카드를 위한 상태 변수들
   Timer? _infoTimer;
@@ -61,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     if (kIsWeb) {
-      _generateMapImageUrl();
+      _initWebMap();
     }
     _loadJobPostingsForCurrentView();
 
@@ -82,103 +84,128 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // 웹용 static API 관련 메서드들
-  void _generateMapImageUrl() {
+  // 웹용 JavaScript API 관련 메서드들
+  void _initWebMap() {
     if (!kIsWeb) return;
-
-    _mapImageUrl = 'https://maps.apigw.ntruss.com/map-static/v2/raster-cors?'
-        'w=400&h=400'
-        '&center=$_currentLng,$_currentLat'
-        '&level=$_currentZoom'
-        '&X-NCP-APIGW-API-KEY-ID=$_naverApiKey';
-
-    Logger.info('지도 이미지 URL 생성: $_mapImageUrl');
-  }
-
-  double _getLatitudeRange() {
-    // 줌 레벨에 따른 위도 범위 계산 (근사치)
-    switch (_currentZoom) {
-      case 9: return 0.5;
-      case 10: return 0.25;
-      case 11: return 0.125;
-      case 12: return 0.0625;
-      case 13: return 0.03125;
-      case 14: return 0.015625;
-      case 15: return 0.0078125;
-      default: return 0.125;
-    }
-  }
-
-  double _getLongitudeRange() {
-    // 줌 레벨에 따른 경도 범위 계산 (근사치)
-    switch (_currentZoom) {
-      case 9: return 0.6;
-      case 10: return 0.3;
-      case 11: return 0.15;
-      case 12: return 0.075;
-      case 13: return 0.0375;
-      case 14: return 0.01875;
-      case 15: return 0.009375;
-      default: return 0.15;
-    }
-  }
-
-  void _onWebMapTapped(TapUpDetails details, BoxConstraints constraints) {
-    if (!kIsWeb) return;
-
-    // 탭한 위치를 기준으로 근처의 일자리 찾기
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final localPosition = renderBox.globalToLocal(details.globalPosition);
-
-    // 지도 영역 내에서의 상대적 위치 계산
-    final mapWidth = constraints.maxWidth;
-    final mapHeight = constraints.maxHeight;
-
-    final relativeX = localPosition.dx / mapWidth;
-    final relativeY = localPosition.dy / mapHeight;
-
-    // 상대적 위치를 실제 좌표로 변환
-    final latRange = _getLatitudeRange() * 2;
-    final lngRange = _getLongitudeRange() * 2;
-
-    final tappedLat = _currentLat + (0.5 - relativeY) * latRange;
-    final tappedLng = _currentLng + (relativeX - 0.5) * lngRange;
-
-    // 근처의 일자리 찾기 (100m 반경 내)
-    JobPostingResponse? nearestJob;
-    double minDistance = double.infinity;
-
-    for (final job in _jobPostings) {
-      final distance = _calculateDistance(
-          tappedLat, tappedLng,
-          job.latitude, job.longitude
+    
+    _webMapElementId = 'navermap_${DateTime.now().millisecondsSinceEpoch}';
+    
+    // HTML Element를 Flutter에 등록
+    if (kIsWeb) {
+      ui_web.platformViewRegistry.registerViewFactory(
+        _webMapElementId!,
+        (int viewId) {
+          final mapDiv = html.DivElement()
+            ..id = 'map$viewId'
+            ..style.width = '100%'
+            ..style.height = '100%';
+          
+          // 지도 초기화를 다음 프레임에서 실행
+          Timer(Duration.zero, () => _createWebMap(mapDiv));
+          
+          return mapDiv;
+        },
       );
-
-      if (distance < 0.001 && distance < minDistance) { // 100m 이내
-        minDistance = distance;
-        nearestJob = job;
-      }
-    }
-
-    if (nearestJob != null) {
-      final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
-          .state
-          .userState
-          .isAuthenticated;
-
-      if (isAuthenticated) {
-        _showJobPostingDetails(nearestJob);
-      } else {
-        _showLoginRequiredDialog();
-      }
     }
   }
 
-  double _calculateDistance(double lat1, double lng1, double lat2, double lng2) {
-    // 두 지점 간의 거리 계산 (단순한 유클리드 거리)
-    final deltaLat = lat1 - lat2;
-    final deltaLng = lng1 - lng2;
-    return math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng);
+  void _createWebMap(html.DivElement mapDiv) {
+    if (!kIsWeb) return;
+    
+    try {
+      // naver.maps가 로드되었는지 확인
+      if (js.context['naver'] == null || js.context['naver']['maps'] == null) {
+        Logger.error('Naver Maps API가 로드되지 않았습니다.');
+        return;
+      }
+
+      final mapOptions = js.JsObject.jsify({
+        'center': js.JsObject(js.context['naver']['maps']['LatLng'], [_initialLat, _initialLng]),
+        'zoom': _initialZoom,
+        'mapTypeControl': true,
+        'mapTypeControlOptions': {
+          'style': js.context['naver']['maps']['MapTypeControlStyle']['BUTTON'],
+          'position': js.context['naver']['maps']['Position']['TOP_RIGHT']
+        },
+        'zoomControl': true,
+        'zoomControlOptions': {
+          'position': js.context['naver']['maps']['Position']['TOP_LEFT']
+        }
+      });
+
+      _webMap = js.JsObject(js.context['naver']['maps']['Map'], [mapDiv, mapOptions]);
+
+      // 지도 이벤트 리스너 추가
+      js.context['naver']['maps']['Event'].callMethod('addListener', [
+        _webMap,
+        'idle',
+        js.allowInterop(() => _onWebMapIdle())
+      ]);
+
+      Logger.info('웹 지도 초기화 완료');
+      _loadJobPostingsForCurrentView();
+    } catch (e) {
+      Logger.error('웹 지도 생성 실패', error: e);
+    }
+  }
+
+  void _onWebMapIdle() {
+    if (!kIsWeb) return;
+    
+    Logger.debug('웹 지도 이동 완료');
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+      _loadJobPostingsForCurrentView();
+    });
+  }
+
+  void _updateWebMapMarkers() {
+    if (_webMap == null || !kIsWeb) return;
+
+    try {
+      // 기존 마커들 제거 (웹에서는 마커 배열을 따로 관리해야 함)
+      // 여기서는 간단히 구현
+      
+      for (final job in _jobPostings) {
+        final position = js.JsObject(js.context['naver']['maps']['LatLng'], [job.latitude, job.longitude]);
+        
+        final marker = js.JsObject(js.context['naver']['maps']['Marker'], [
+          js.JsObject.jsify({
+            'position': position,
+            'map': _webMap,
+            'title': job.title,
+            'icon': js.JsObject.jsify({
+              'content': '<div style="background: #F2711C; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${job.title.length > 10 ? '${job.title.substring(0, 10)}...' : job.title}</div>',
+              'anchor': js.JsObject(js.context['naver']['maps']['Point'], [0, 0])
+            })
+          })
+        ]);
+
+        // 마커 클릭 이벤트
+        js.context['naver']['maps']['Event'].callMethod('addListener', [
+          marker,
+          'click',
+          js.allowInterop(() => _onWebMarkerClick(job))
+        ]);
+      }
+
+      Logger.info('웹 마커 업데이트 완료: ${_jobPostings.length}개');
+    } catch (e) {
+      Logger.error('웹 마커 업데이트 실패', error: e);
+    }
+  }
+
+  void _onWebMarkerClick(JobPostingResponse jobPosting) {
+    final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
+        .state
+        .userState
+        .isAuthenticated;
+
+    if (isAuthenticated) {
+      _showJobPostingDetails(jobPosting);
+    } else {
+      _showLoginRequiredDialog();
+    }
   }
 
   // 기존 NaverMap 관련 메서드들
@@ -210,14 +237,36 @@ class _HomeScreenState extends State<HomeScreen> {
       double minLat, maxLat, minLng, maxLng;
 
       if (kIsWeb) {
-        // 웹: 현재 지도 범위 계산 (대략적)
-        double latRange = _getLatitudeRange();
-        double lngRange = _getLongitudeRange();
-
-        minLat = _currentLat - latRange;
-        maxLat = _currentLat + latRange;
-        minLng = _currentLng - lngRange;
-        maxLng = _currentLng + lngRange;
+        if (_webMap != null) {
+          try {
+            // 웹: JavaScript API에서 bounds 가져오기
+            final bounds = _webMap!.callMethod('getBounds');
+            final sw = bounds.callMethod('getSW');
+            final ne = bounds.callMethod('getNE');
+            
+            minLat = sw.callMethod('lat');
+            maxLat = ne.callMethod('lat');
+            minLng = sw.callMethod('lng');
+            maxLng = ne.callMethod('lng');
+          } catch (e) {
+            Logger.error('웹 지도 bounds 가져오기 실패', error: e);
+            // 실패 시 기본 범위 사용
+            const latRange = 0.125;
+            const lngRange = 0.15;
+            minLat = _initialLat - latRange;
+            maxLat = _initialLat + latRange;
+            minLng = _initialLng - lngRange;
+            maxLng = _initialLng + lngRange;
+          }
+        } else {
+          // 웹 지도가 아직 초기화되지 않은 경우 기본 범위 사용
+          const latRange = 0.125;
+          const lngRange = 0.15;
+          minLat = _initialLat - latRange;
+          maxLat = _initialLat + latRange;
+          minLng = _initialLng - lngRange;
+          maxLng = _initialLng + lngRange;
+        }
       } else {
         // 앱: NaverMapController에서 bounds 가져오기
         if (_controller == null) return;
@@ -243,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
 
         if (kIsWeb) {
-          _generateMapImageUrl();
+          _updateWebMapMarkers();
         } else {
           await _updateMarkers(result.data!);
         }
@@ -364,13 +413,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _moveToJejuCenter() {
     if (kIsWeb) {
-      setState(() {
-        _currentLat = _initialLat;
-        _currentLng = _initialLng;
-        _currentZoom = _initialZoom;
-      });
-      _generateMapImageUrl();
-      _loadJobPostingsForCurrentView();
+      if (_webMap != null) {
+        try {
+          final center = js.JsObject(js.context['naver']['maps']['LatLng'], [_initialLat, _initialLng]);
+          _webMap!.callMethod('setCenter', [center]);
+          _webMap!.callMethod('setZoom', [_initialZoom]);
+          _loadJobPostingsForCurrentView();
+        } catch (e) {
+          Logger.error('웹 지도 중심 이동 실패', error: e);
+        }
+      }
     } else {
       if (_controller != null) {
         _controller!.updateCamera(
@@ -874,44 +926,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWebMap() {
-    return Container(
-      color: Colors.grey[300],
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return GestureDetector(
-            onTapUp: (details) => _onWebMapTapped(details, constraints),
-            child: _mapImageUrl != null
-                ? Image.network(
-              _mapImageUrl!,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Center(
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                        : null,
-                  ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error, size: 64, color: Colors.red),
-                      SizedBox(height: 16),
-                      Text('지도를 불러올 수 없습니다'),
-                    ],
-                  ),
-                );
-              },
-            )
-                : const Center(child: CircularProgressIndicator()),
-          );
-        },
-      ),
+    if (_webMapElementId == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    return HtmlElementView(
+      viewType: _webMapElementId!,
     );
   }
 
