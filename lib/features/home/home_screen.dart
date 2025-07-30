@@ -29,13 +29,16 @@ class _HomeScreenState extends State<HomeScreen> {
   final JobPostingService _jobPostingService = JobPostingService.instance;
   Timer? _debounceTimer;
   bool _isLoading = false;
-  double _sheetExtent = 0.3;
+
+  // DraggableScrollableSheet 관련 상태
+  double _sheetPosition = 0.3;
+  final DraggableScrollableController _sheetController = DraggableScrollableController();
+  static const double _fixedSpacing = -20.0; // 고정 간격
 
   // 웹용 설정
   static const double _initialLat = 33.375;
   static const double _initialLng = 126.49;
   static const int _initialZoom = 11;
-
 
   static const NLatLng _initialPosition = NLatLng(_initialLat, _initialLng);
 
@@ -43,11 +46,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadJobPostingsForCurrentView();
+
+    // DraggableScrollableController 리스너 추가
+    _sheetController.addListener(() {
+      if (_sheetController.isAttached) {
+        setState(() {
+          _sheetPosition = _sheetController.size;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _sheetController.dispose();
     super.dispose();
   }
 
@@ -64,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _showLoginRequiredDialog();
     }
   }
+
   void _onMapReady(NaverMapController controller) {
     _controller = controller;
     Logger.info('네이버 지도 초기화 완료');
@@ -261,101 +275,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final sheetHeight = screenHeight * _sheetPosition;
+    // 시트 위치에 따라 동적으로 간격 조정
+    double dynamicSpacing;
+    if (_sheetPosition <= 0.15) {
+      // 최하단일 때는 충분한 간격 확보
+      dynamicSpacing = 0.0;
+    } else if (_sheetPosition > 0.7) {
+      // 최상단일 때는 더 가깝게
+      dynamicSpacing = -60.0;
+    } else {
+      // 중간 위치에서는 기본 간격
+      dynamicSpacing = _fixedSpacing;
+    }
+    final jobAlertBottom = sheetHeight + dynamicSpacing;
+
     return Scaffold(
-      body: NotificationListener<DraggableScrollableNotification>(
-        onNotification: (notification) {
-          setState(() {
-            _sheetExtent = notification.extent;
-          });
-          return false;
-        },
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: IgnorePointer(
-                ignoring: _sheetExtent > 0.8,
-                child: kIsWeb ? _buildWebMap() : _buildNativeMap(),
-              ),
+      body: Stack(
+        children: [
+          // 지도
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: _sheetPosition > 0.8,
+              child: kIsWeb ? _buildWebMap() : _buildNativeMap(),
             ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: _navigateToAiAssistant,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                )
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Image.asset(
-                                'lib/assets/images/dol_hareubang_emti.png',
-                                height: 32,
-                                width: 32,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        CustomPaint(
-                          painter: SpeechBubblePainter(),
-                          child: Container(
-                            padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
-                            child: const Text(
-                              ' 클릭하면 AI 팁!',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        if (_isLoading)
-                          Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  )
-                                ],
-                              ),
-                              child: const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF2711C)),
-                                ),
-                              ),
-                            ),
-                          ),
-                        Container(
+          ),
+          // 상단 UI
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _navigateToAiAssistant,
+                        child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(30),
@@ -367,236 +324,306 @@ class _HomeScreenState extends State<HomeScreen> {
                               )
                             ],
                           ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                onPressed: _moveToJejuCenter,
-                                icon: const Icon(Icons.my_location, size: 26),
-                                color: const Color(0xFFF2711C),
-                              ),
-                              Container(height: 20, width: 1, color: Colors.grey[300]),
-                              IconButton(
-                                onPressed: _loadJobPostingsForCurrentView,
-                                icon: const Icon(Icons.refresh, size: 26),
-                                color: const Color(0xFFF2711C),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 130,
-              right: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.white.withOpacity(0.95),
-                      Colors.grey[50]!.withOpacity(0.95),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(
-                    color: const Color(0xFFF2711C).withOpacity(0.2),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFF2711C),
-                            Color(0xFFFF8C42),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.work_outline,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '현재 ${_jobPostings.length}개의 일자리가 있습니다',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF2D2D2D),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            DraggableScrollableSheet(
-              initialChildSize: 0.3,
-              minChildSize: 0.1,
-              maxChildSize: 0.8,
-              expand: true,
-              snap: true,
-              snapSizes: const [0.1, 0.3, 0.8],
-              builder: (BuildContext context, ScrollController scrollController) {
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 10,
-                        offset: Offset(0, -2),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: scrollController,
                           child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Container(
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFF2711C),
-                                        Color(0xFFFF8C42),
-                                      ],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFFF2711C).withValues(alpha: 0.3),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _navigateToJobList,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.search, color: Colors.white),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          '일자리 찾기',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.white,
-                                        Colors.grey[50]!,
-                                      ],
-                                    ),
-                                    border: Border.all(
-                                      color: const Color(0xFFF2711C).withValues(alpha: 0.3),
-                                      width: 2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.05),
-                                        blurRadius: 15,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _showWorkerRecruit,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.people, color: Color(0xFFF2711C)),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          '일손 구하기',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFFF2711C),
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            padding: const EdgeInsets.all(12),
+                            child: Image.asset(
+                              'lib/assets/images/dol_hareubang_emti.png',
+                              height: 32,
+                              width: 32,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      CustomPaint(
+                        painter: SpeechBubblePainter(),
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+                          child: const Text(
+                            ' 클릭하면 AI 팁!',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                );
-              },
+                  Row(
+                    children: [
+                      if (_isLoading)
+                        Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF2711C)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: _moveToJejuCenter,
+                              icon: const Icon(Icons.my_location, size: 26),
+                              color: const Color(0xFFF2711C),
+                            ),
+                            Container(height: 20, width: 1, color: Colors.grey[300]),
+                            IconButton(
+                              onPressed: _loadJobPostingsForCurrentView,
+                              icon: const Icon(Icons.refresh, size: 26),
+                              color: const Color(0xFFF2711C),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+          // 일자리 알림 위젯 - DraggableScrollableSheet 위에 고정 간격으로 배치
+          Positioned(
+            bottom: jobAlertBottom,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.95),
+                    Colors.grey[50]!.withOpacity(0.95),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: const Color(0xFFF2711C).withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFF2711C),
+                          Color(0xFFFF8C42),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.work_outline,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '현재 ${_jobPostings.length}개의 일자리가 있습니다',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2D2D2D),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // DraggableScrollableSheet
+          DraggableScrollableSheet(
+            controller: _sheetController,
+            initialChildSize: 0.3,
+            minChildSize: 0.1,
+            maxChildSize: 0.8,
+            expand: true,
+            snap: true,
+            snapSizes: const [0.1, 0.3, 0.8],
+            builder: (BuildContext context, ScrollController scrollController) {
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, -2),
+                    )
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Container(
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFFF2711C),
+                                      Color(0xFFFF8C42),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFF2711C).withValues(alpha: 0.3),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _navigateToJobList,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.search, color: Colors.white),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        '일자리 찾기',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.white,
+                                      Colors.grey[50]!,
+                                    ],
+                                  ),
+                                  border: Border.all(
+                                    color: const Color(0xFFF2711C).withValues(alpha: 0.3),
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _showWorkerRecruit,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.people, color: Color(0xFFF2711C)),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        '일손 구하기',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFFF2711C),
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -798,7 +825,7 @@ class SpeechBubblePainter extends CustomPainter {
 
     // 그림자 그리기
     canvas.drawPath(path, shadowPaint);
-    
+
     // 말풍선 그리기
     canvas.drawPath(path, paint);
   }
