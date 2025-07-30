@@ -19,6 +19,9 @@ List<Middleware<AppState>> createChatMiddleware() {
     TypedMiddleware<AppState, EnterChatRoomAction>(_enterChatRoom(chatService)),
     TypedMiddleware<AppState, LeaveChatRoomAction>(_leaveChatRoom(chatService)),
     TypedMiddleware<AppState, SendFileMessageAction>(_sendFileMessage(chatService)),
+    TypedMiddleware<AppState, LoadUnreadCountAction>(_loadUnreadCount(chatService)),
+    TypedMiddleware<AppState, LoadChatRoomsByTypeAction>(_loadChatRoomsByType(chatService)),
+    TypedMiddleware<AppState, SearchChatRoomsAction>(_searchChatRooms(chatService)),
   ];
 }
 
@@ -151,6 +154,55 @@ _sendFileMessage(ChatService service) {
       store.dispatch(ReceiveMessageAction(message));
     }).onFailure((error) {
       store.dispatch(SetChatErrorAction('파일 메시지 전송 실패: ${error.message}'));
+    });
+  };
+}
+
+void Function(Store<AppState> store, LoadUnreadCountAction action, NextDispatcher next)
+_loadUnreadCount(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    final result = await service.getUnreadCount();
+    result.onSuccess((count) {
+      store.dispatch(LoadUnreadCountSuccessAction(count));
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('읽지 않은 메시지 개수 조회 실패: ${error.message}'));
+    });
+  };
+}
+
+void Function(Store<AppState> store, LoadChatRoomsByTypeAction action, NextDispatcher next)
+_loadChatRoomsByType(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    store.dispatch(SetChatLoadingAction(true));
+    final result = await service.getChatRoomsByType(
+      chatType: action.chatType,
+      page: action.page,
+      size: action.size,
+    );
+    result.onSuccess((chatRooms) {
+      store.dispatch(LoadChatRoomsSuccessAction(chatRooms));
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('타입별 채팅방 조회 실패: ${error.message}'));
+    });
+  };
+}
+
+void Function(Store<AppState> store, SearchChatRoomsAction action, NextDispatcher next)
+_searchChatRooms(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    store.dispatch(SetChatLoadingAction(true));
+    final result = await service.searchChatRooms(
+      query: action.query,
+      page: action.page,
+      size: action.size,
+    );
+    result.onSuccess((chatRooms) {
+      store.dispatch(LoadChatRoomsSuccessAction(chatRooms));
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('채팅방 검색 실패: ${error.message}'));
     });
   };
 }

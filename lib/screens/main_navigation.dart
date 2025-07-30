@@ -98,74 +98,54 @@ class _MainNavigationState extends State<MainNavigation> {
               ),
             ],
           ),
-          bottomNavigationBar: Transform.translate(
-            offset: const Offset(0.0, -20.0),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Container(
-                decoration: BoxDecoration(
+          bottomNavigationBar: Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: SafeArea(
+              child: GNav(
+                // Key를 위젯에 할당합니다.
+                key: _bottomNavKey,
+                gap: 8,
+                activeColor: Colors.white,
+                iconSize: 24,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                duration: const Duration(milliseconds: 400),
+                tabBackgroundColor: const Color(0xFFF2711C),
+                color: Colors.grey[600],
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
                   color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 20,
-                      color: Colors.black.withOpacity(.1),
-                    )
-                  ],
-                  borderRadius: BorderRadius.circular(20.0),
+                  fontFamily: 'Pretendard',
+                  letterSpacing: -0.2,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8),
-                  child: GNav(
-                    // Key를 위젯에 할당합니다.
-                    key: _bottomNavKey,
-                    gap: 8, // 간격을 조금 줄여서 overflow 방지
-                    activeColor: Colors.white,
-                    iconSize: 22, // 아이콘 크기를 조금 줄임
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12), // 패딩 조금 줄임
-                    duration: const Duration(milliseconds: 400),
-                    tabBackgroundColor: const Color(0xFFF2711C),
-                    color: Colors.grey[600],
-                    textStyle: const TextStyle(
-                      fontSize: 14, // 텍스트 크기를 조금 줄임
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      fontFamily: 'Pretendard',
-                      letterSpacing: -0.2,
-                    ),
-                    tabs: [
-                      GButton(
-                        icon: _currentIndex == 0 ? Icons.circle : FontAwesomeIcons.house,
-                        iconSize: _currentIndex == 0 ? 0 : 22, // 활성화시 아이콘 크기를 0으로, 비활성화시 조정
-                        text: '밭터오라',
-                      ),
-                      GButton(
-                        icon: _currentIndex == 1 ? Icons.circle : FontAwesomeIcons.clipboardList,
-                        iconSize: _currentIndex == 1 ? 0 : 22, // 활성화시 아이콘 크기를 0으로, 비활성화시 조정
-                        text: '말벗방',
-                      ),
-                      GButton(
-                        icon: _currentIndex == 2 ? Icons.circle : FontAwesomeIcons.solidCommentDots,
-                        iconSize: _currentIndex == 2 ? 0 : 22, // 활성화시 아이콘 크기를 0으로, 비활성화시 조정
-                        text: '궁시렁',
-                      ),
-                      GButton(
-                        icon: _currentIndex == 3 ? Icons.circle : FontAwesomeIcons.tractor,
-                        iconSize: _currentIndex == 3 ? 0 : 22, // 활성화시 아이콘 크기를 0으로, 비활성화시 조정
-                        text: '농지 보기',
-                      ),
-                      GButton(
-                        icon: _currentIndex == 4 ? Icons.circle : (userState.isAuthenticated
-                            ? FontAwesomeIcons.solidUser
-                            : FontAwesomeIcons.user),
-                        iconSize: _currentIndex == 4 ? 0 : 22, // 활성화시 아이콘 크기를 0으로, 비활성화시 조정
-                        text: 'MY농디',
-                      ),
-                    ],
-                    selectedIndex: _currentIndex,
-                    // onTabChange는 새로 만든 비동기 함수를 호출합니다.
-                    onTabChange: _handleTabChange,
+                tabs: [
+                  GButton(
+                    icon: FontAwesomeIcons.house,
+                    text: '밭터오라',
                   ),
-                ),
+                  GButton(
+                    icon: FontAwesomeIcons.clipboardList,
+                    text: '말벗방',
+                  ),
+                  GButton(
+                    icon: FontAwesomeIcons.solidCommentDots,
+                    text: '궁시렁',
+                  ),
+                  GButton(
+                    icon: FontAwesomeIcons.tractor,
+                    text: ' 유휴농지',
+                  ),
+                  GButton(
+                    icon: userState.isAuthenticated
+                        ? FontAwesomeIcons.solidUser
+                        : FontAwesomeIcons.user,
+                    text: 'MY농디',
+                  ),
+                ],
+                selectedIndex: _currentIndex,
+                // onTabChange는 새로 만든 비동기 함수를 호출합니다.
+                onTabChange: _handleTabChange,
               ),
             ),
           ),

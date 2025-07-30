@@ -4,6 +4,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:jejunongdi/core/models/job_posting_model.dart';
 import 'package:jejunongdi/core/services/job_posting_service.dart';
+import 'package:jejunongdi/core/models/chat_models.dart';
+import 'package:jejunongdi/redux/chat/chat_actions.dart';
+import 'package:flutter_redux/flutter_redux.dart';
+import 'package:jejunongdi/redux/app_state.dart';
 
 class JobPostingDetailScreen extends StatefulWidget {
   final int jobPostingId;
@@ -114,6 +118,26 @@ class _JobPostingDetailScreenState extends State<JobPostingDetailScreen> {
               },
             ),
           ),
+          actions: [
+            StoreConnector<AppState, VoidCallback>(
+              converter: (store) => () {
+                store.dispatch(CreateChatRoomAction(
+                  chatType: 'JOB_POSTING',
+                  participantId: posting.author.id,
+                  referenceId: posting.id,
+                  initialMessage: '${posting.title} 공고에 문의드립니다.',
+                ));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('채팅방을 생성하고 있습니다...')),
+                );
+              },
+              builder: (context, startChat) => IconButton(
+                icon: const Icon(Icons.chat, color: Colors.white),
+                onPressed: startChat,
+                tooltip: '채팅하기',
+              ),
+            ),
+          ],
         ),
         SliverToBoxAdapter(
           child: Padding(

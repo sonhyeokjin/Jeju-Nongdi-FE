@@ -3,6 +3,26 @@ import 'package:jejunongdi/core/models/mentoring_models.dart'; // UserResponse �
 
 part 'chat_models.g.dart';
 
+// 채팅 타입 열거형
+enum ChatType {
+  @JsonValue('MENTORING')
+  mentoring,
+  @JsonValue('FARMLAND')
+  farmland,
+  @JsonValue('JOB_POSTING')
+  jobPosting,
+  @JsonValue('GENERAL')
+  general,
+}
+
+// 메시지 타입 열거형
+enum MessageType {
+  @JsonValue('TEXT')
+  text,
+  @JsonValue('FILE')
+  file,
+}
+
 // 채팅방 목록의 각 아이템
 @JsonSerializable()
 class ChatRoomResponse {
@@ -85,4 +105,16 @@ class ChatRoomCreateRequest {
   factory ChatRoomCreateRequest.fromJson(Map<String, dynamic> json) =>
       _$ChatRoomCreateRequestFromJson(json);
   Map<String, dynamic> toJson() => _$ChatRoomCreateRequestToJson(this);
+}
+
+// 읽지 않은 메시지 개수 응답 모델
+@JsonSerializable()
+class UnreadCountResponse {
+  final int unreadCount;
+
+  UnreadCountResponse({required this.unreadCount});
+
+  factory UnreadCountResponse.fromJson(Map<String, dynamic> json) =>
+      _$UnreadCountResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$UnreadCountResponseToJson(this);
 }

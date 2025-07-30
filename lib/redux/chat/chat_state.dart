@@ -15,6 +15,9 @@ class ChatState {
   final Map<String, bool> hasMoreMessages; // 각 채팅방별 페이징 정보
   final Map<String, int> currentPage; // 각 채팅방별 현재 페이지
 
+  // 읽지 않은 메시지 총 개수
+  final int totalUnreadCount;
+
   const ChatState({
     required this.isLoading,
     this.error,
@@ -22,6 +25,7 @@ class ChatState {
     required this.messages,
     required this.hasMoreMessages,
     required this.currentPage,
+    required this.totalUnreadCount,
   });
 
   // 초기 상태
@@ -33,6 +37,7 @@ class ChatState {
       messages: {},
       hasMoreMessages: {},
       currentPage: {},
+      totalUnreadCount: 0,
     );
   }
 
@@ -44,6 +49,7 @@ class ChatState {
     Map<String, List<ChatMessageResponse>>? messages,
     Map<String, bool>? hasMoreMessages,
     Map<String, int>? currentPage,
+    int? totalUnreadCount,
   }) {
     return ChatState(
       isLoading: isLoading ?? this.isLoading,
@@ -52,6 +58,7 @@ class ChatState {
       messages: messages ?? this.messages,
       hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
       currentPage: currentPage ?? this.currentPage,
+      totalUnreadCount: totalUnreadCount ?? this.totalUnreadCount,
     );
   }
 }

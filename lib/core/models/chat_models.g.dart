@@ -76,3 +76,10 @@ Map<String, dynamic> _$ChatRoomCreateRequestToJson(
   'referenceId': instance.referenceId,
   'initialMessage': instance.initialMessage,
 };
+
+UnreadCountResponse _$UnreadCountResponseFromJson(Map<String, dynamic> json) =>
+    UnreadCountResponse(unreadCount: (json['unreadCount'] as num).toInt());
+
+Map<String, dynamic> _$UnreadCountResponseToJson(
+  UnreadCountResponse instance,
+) => <String, dynamic>{'unreadCount': instance.unreadCount};

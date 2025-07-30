@@ -12,6 +12,7 @@ final chatReducer = combineReducers<ChatState>([
   TypedReducer<ChatState, ReceiveMessageAction>(_receiveMessage),
   TypedReducer<ChatState, CreateChatRoomSuccessAction>(_createChatRoomSuccess),
   TypedReducer<ChatState, MarkMessagesAsReadSuccessAction>(_markMessagesAsReadSuccess),
+  TypedReducer<ChatState, LoadUnreadCountSuccessAction>(_loadUnreadCountSuccess),
 ]);
 
 ChatState _setLoading(ChatState state, SetChatLoadingAction action) {
@@ -109,4 +110,8 @@ ChatState _markMessagesAsReadSuccess(ChatState state, MarkMessagesAsReadSuccessA
   }).toList();
   
   return state.copyWith(chatRooms: updatedRooms);
+}
+
+ChatState _loadUnreadCountSuccess(ChatState state, LoadUnreadCountSuccessAction action) {
+  return state.copyWith(totalUnreadCount: action.unreadCount);
 }

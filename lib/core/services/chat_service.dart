@@ -271,4 +271,23 @@ class ChatService {
       return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
     }
   }
+
+  /// 읽지 않은 메시지 총 개수 조회
+  Future<ApiResult<int>> getUnreadCount() async {
+    try {
+      Logger.info('읽지 않은 메시지 총 개수 조회 시도');
+      final response = await _apiClient.get<Map<String, dynamic>>('/api/chat/unread-count');
+
+      if (response.data != null) {
+        final unreadCount = response.data!['unreadCount'] ?? 0;
+        Logger.info('읽지 않은 메시지 총 개수 조회 성공: $unreadCount개');
+        return ApiResult.success(unreadCount as int);
+      } else {
+        return ApiResult.failure(const UnknownException('읽지 않은 메시지 개수 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('읽지 않은 메시지 총 개수 조회 실패', error: e);
+      return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
+    }
+  }
 }

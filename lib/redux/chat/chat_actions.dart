@@ -103,3 +103,37 @@ class SendFileMessageAction {
   final String? content;
   SendFileMessageAction(this.roomId, this.filePath, {this.content});
 }
+
+// --- 읽지 않은 메시지 개수 관련 액션 ---
+class LoadUnreadCountAction {}
+
+class LoadUnreadCountSuccessAction {
+  final int unreadCount;
+  LoadUnreadCountSuccessAction(this.unreadCount);
+}
+
+// --- 채팅방 타입별 조회 관련 액션 ---
+class LoadChatRoomsByTypeAction {
+  final String chatType;
+  final int page;
+  final int size;
+  
+  LoadChatRoomsByTypeAction({
+    required this.chatType,
+    this.page = 0,
+    this.size = 20,
+  });
+}
+
+// --- 채팅방 검색 관련 액션 ---
+class SearchChatRoomsAction {
+  final String query;
+  final int page;
+  final int size;
+  
+  SearchChatRoomsAction({
+    required this.query,
+    this.page = 0,
+    this.size = 20,
+  });
+}

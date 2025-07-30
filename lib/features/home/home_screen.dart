@@ -352,126 +352,165 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  Row(
-                    children: [
-                      if (_isLoading)
-                        Container(
-                          margin: const EdgeInsets.only(right: 12),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                )
-                              ],
-                            ),
-                            child: const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF2711C)),
-                              ),
-                            ),
-                          ),
-                        ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            )
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: _moveToJejuCenter,
-                              icon: const Icon(Icons.my_location, size: 26),
-                              color: const Color(0xFFF2711C),
-                            ),
-                            Container(height: 20, width: 1, color: Colors.grey[300]),
-                            IconButton(
-                              onPressed: _loadJobPostingsForCurrentView,
-                              icon: const Icon(Icons.refresh, size: 26),
-                              color: const Color(0xFFF2711C),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  const SizedBox.shrink(), // 빈 공간으로 대체
                 ],
               ),
             ),
           ),
-          // 일자리 알림 위젯 - DraggableScrollableSheet 위에 고정 간격으로 배치
+          // 컨테이너들을 가로로 배치 - 왼쪽에 위치 추적 + 새로고침 버튼, 중앙에 일자리 알림, 오른쪽에 로딩
           Positioned(
             bottom: jobAlertBottom,
+            left: 16,
             right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.95),
-                    Colors.grey[50]!.withOpacity(0.95),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: const Color(0xFFF2711C).withOpacity(0.2),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // 왼쪽: 위치 추적 및 새로고침 버튼 컨테이너
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.95),
+                        Colors.grey[50]!.withOpacity(0.95),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFFF2711C).withOpacity(0.2),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 위치 추적 버튼
+                      InkWell(
+                        onTap: _moveToJejuCenter,
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFF2711C),
+                                Color(0xFFFF8C42),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.my_location,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      // 구분선
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        width: 1,
+                        height: 20,
+                        color: const Color(0xFFF2711C).withOpacity(0.3),
+                      ),
+                      // 새로고침 버튼
+                      InkWell(
+                        onTap: _loadJobPostingsForCurrentView,
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFF2711C),
+                                Color(0xFFFF8C42),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.refresh,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 중앙: 일자리 알림 컨테이너 (Flexible로 변경하여 overflow 방지)
+                Flexible(
+                  flex: 1,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [
-                          Color(0xFFF2711C),
-                          Color(0xFFFF8C42),
+                          Colors.white.withOpacity(0.95),
+                          Colors.grey[50]!.withOpacity(0.95),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: const Color(0xFFF2711C).withOpacity(0.2),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.work_outline,
-                      size: 14,
-                      color: Colors.white,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFF2711C),
+                                Color(0xFFFF8C42),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.work_outline,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            '현재 ${_jobPostings.length}개 일자리',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF2D2D2D),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '현재 ${_jobPostings.length}개의 일자리가 있습니다',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF2D2D2D),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           // DraggableScrollableSheet
@@ -496,32 +535,33 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Container(
-                                height: 64,
+                      // 상단 버튼 영역 (50:50 배치)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                        child: Row(
+                          children: [
+                            // 일자리 찾기 버튼 (50%)
+                            Expanded(
+                              child: Container(
+                                height: 44,
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(12),
                                   gradient: const LinearGradient(
                                     colors: [
                                       Color(0xFFF2711C),
@@ -531,8 +571,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   boxShadow: [
                                     BoxShadow(
                                       color: const Color(0xFFF2711C).withValues(alpha: 0.3),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 8),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
@@ -542,32 +582,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
                                   child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.search, color: Colors.white),
-                                      SizedBox(width: 12),
+                                      Icon(Icons.search, color: Colors.white, size: 16),
+                                      SizedBox(width: 6),
                                       Text(
                                         '일자리 찾기',
                                         style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
                                           color: Colors.white,
-                                          letterSpacing: 0.5,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              Container(
-                                height: 64,
+                            ),
+                            const SizedBox(width: 8),
+                            // 일손 구하기 버튼 (50%)
+                            Expanded(
+                              child: Container(
+                                height: 44,
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(12),
                                   gradient: LinearGradient(
                                     colors: [
                                       Colors.white,
@@ -576,13 +618,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   border: Border.all(
                                     color: const Color(0xFFF2711C).withValues(alpha: 0.3),
-                                    width: 2,
+                                    width: 1.5,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withValues(alpha: 0.05),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 4),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
@@ -592,33 +634,42 @@ class _HomeScreenState extends State<HomeScreen> {
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
                                   child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.people, color: Color(0xFFF2711C)),
-                                      SizedBox(width: 12),
+                                      Icon(Icons.people, color: Color(0xFFF2711C), size: 16),
+                                      SizedBox(width: 6),
                                       Text(
                                         '일손 구하기',
                                         style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
                                           color: Color(0xFFF2711C),
-                                          letterSpacing: 0.5,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                      // 추가 콘텐츠 영역
+                      const Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // 필요시 추가 콘텐츠를 여기에 배치
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
