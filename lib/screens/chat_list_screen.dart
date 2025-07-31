@@ -62,6 +62,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ],
                         ),
                         child: IconButton(
+                          icon: const Icon(Icons.data_usage),
+                          tooltip: '더미 채팅방 생성',
+                          color: Colors.green,
+                          onPressed: () {
+                            final store = StoreProvider.of<AppState>(context, listen: false);
+                            store.dispatch(CreateDummyChatRoomsAction());
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('더미 채팅방을 생성했습니다!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
                           icon: const Icon(Icons.add_comment_outlined),
                           tooltip: '새 대화',
                           color: const Color(0xFFF2711C),
@@ -177,7 +206,7 @@ class _ChatRoomTile extends StatelessWidget {
             : null,
       ),
       title: Text(
-        chatRoom.roomName ?? '이름 없는 채팅방',
+        chatRoom.roomName ?? chatRoom.otherUser?.name ?? '이름 없는 채팅방',
         style: const TextStyle(fontWeight: FontWeight.bold),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

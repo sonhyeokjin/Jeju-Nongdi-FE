@@ -84,3 +84,22 @@ class DeleteChatRoomSuccessAction {
   final String roomId;
   DeleteChatRoomSuccessAction(this.roomId);
 }
+
+// --- 더미 데이터 생성 관련 액션 ---
+class CreateDummyChatRoomsAction {}
+
+class CreateDummyChatRoomsSuccessAction {
+  final List<ChatRoomView> dummyChatRooms;
+  CreateDummyChatRoomsSuccessAction(this.dummyChatRooms);
+}
+
+class CreateDummyMessagesAction {
+  final String roomId;
+  CreateDummyMessagesAction(this.roomId);
+}
+
+class CreateDummyMessagesSuccessAction {
+  final String roomId;
+  final List<MessageDto> dummyMessages;
+  CreateDummyMessagesSuccessAction(this.roomId, this.dummyMessages);
+}

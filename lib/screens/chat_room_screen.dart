@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/chat_models.dart';
+import 'package:jejunongdi/core/models/mentoring_models.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/chat/chat_actions.dart';
 import 'package:jejunongdi/core/services/chat_service.dart';
@@ -32,15 +33,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     print('ChatRoomScreen initiated with roomId: ${widget.roomId}');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print('Dispatching LoadChatMessagesAction for roomId: ${widget.roomId}');
-      StoreProvider.of<AppState>(context, listen: false)
-          .dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
+      final store = StoreProvider.of<AppState>(context, listen: false);
+      
+      // 더미 룸인 경우 더미 메시지 생성
+      if (widget.roomId.startsWith('dummy-room-')) {
+        store.dispatch(CreateDummyMessagesAction(widget.roomId));
+      } else {
+        store.dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
+      }
     });
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
-        StoreProvider.of<AppState>(context, listen: false)
-            .dispatch(LoadChatMessagesAction(widget.roomId));
+        // 더미 룸이 아닌 경우에만 추가 메시지 로드
+        if (!widget.roomId.startsWith('dummy-room-')) {
+          StoreProvider.of<AppState>(context, listen: false)
+              .dispatch(LoadChatMessagesAction(widget.roomId));
+        }
       }
     });
 
@@ -56,9 +66,61 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
-    final request = ChatMessageRequest(content: _messageController.text.trim());
-    StoreProvider.of<AppState>(context, listen: false)
-        .dispatch(SendMessageAction(widget.roomId, request));
+    
+    final store = StoreProvider.of<AppState>(context, listen: false);
+    final content = _messageController.text.trim();
+    
+    // 더미 룸인 경우 더미 메시지로 처리
+    if (widget.roomId.startsWith('dummy-room-')) {
+      // 더미 메시지 생성 (내가 보낸 메시지)
+      final myUser = UserResponse(
+        id: 999,
+        name: '나',
+        email: 'me@jejunongdi.com',
+        profileImageUrl: null,
+      );
+      
+      final dummyMessage = MessageDto(
+        messageId: 'dummy-msg-${DateTime.now().millisecondsSinceEpoch}',
+        roomId: widget.roomId,
+        sender: myUser,
+        content: content,
+        messageType: 'TEXT',
+        sentAt: DateTime.now(),
+        isRead: false,
+      );
+      
+      store.dispatch(ReceiveMessageAction(dummyMessage));
+      
+      // 자동 응답 메시지 (3초 후)
+      Future.delayed(const Duration(seconds: 3), () {
+        final otherUser = UserResponse(
+          id: 1,
+          name: '감귤농장 김씨',
+          email: 'farmer1@jejunongdi.com',
+          profileImageUrl: null,
+        );
+        
+        final autoReplyMessage = MessageDto(
+          messageId: 'dummy-reply-${DateTime.now().millisecondsSinceEpoch}',
+          roomId: widget.roomId,
+          sender: otherUser,
+          content: '메시지 확인했습니다! 더미 채팅방에서 테스트 중입니다 😊',
+          messageType: 'TEXT',
+          sentAt: DateTime.now(),
+          isRead: false,
+        );
+        
+        if (mounted) {
+          store.dispatch(ReceiveMessageAction(autoReplyMessage));
+        }
+      });
+    } else {
+      // 실제 API 호출
+      final request = ChatMessageRequest(content: content);
+      store.dispatch(SendMessageAction(widget.roomId, request));
+    }
+    
     _messageController.clear();
   }
 

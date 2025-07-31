@@ -16,6 +16,8 @@ List<Middleware<AppState>> createChatMiddleware() {
     TypedMiddleware<AppState, SendMessageAction>(_sendMessage(chatService)),
     TypedMiddleware<AppState, GetOrCreateOneToOneRoomAction>(_getOrCreateOneToOneRoom(chatService)),
     TypedMiddleware<AppState, DeleteChatRoomAction>(_deleteChatRoom(chatService)),
+    TypedMiddleware<AppState, CreateDummyChatRoomsAction>(_createDummyChatRooms(chatService)),
+    TypedMiddleware<AppState, CreateDummyMessagesAction>(_createDummyMessages(chatService)),
   ];
 }
 
@@ -119,6 +121,38 @@ _deleteChatRoom(ChatService service) {
       store.dispatch(LoadChatRoomsAction());
     }).onFailure((error) {
       store.dispatch(SetChatErrorAction('채팅방 삭제 실패: ${error.message}'));
+    });
+  };
+}
+
+void Function(Store<AppState> store, CreateDummyChatRoomsAction action, NextDispatcher next)
+_createDummyChatRooms(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    store.dispatch(SetChatLoadingAction(true));
+    final result = await service.createDummyChatRooms();
+    result.onSuccess((dummyChatRooms) {
+      store.dispatch(CreateDummyChatRoomsSuccessAction(dummyChatRooms));
+      store.dispatch(SetChatLoadingAction(false));
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('더미 채팅방 생성 실패: ${error.message}'));
+      store.dispatch(SetChatLoadingAction(false));
+    });
+  };
+}
+
+void Function(Store<AppState> store, CreateDummyMessagesAction action, NextDispatcher next)
+_createDummyMessages(ChatService service) {
+  return (store, action, next) async {
+    next(action);
+    store.dispatch(SetChatLoadingAction(true));
+    final result = await service.createDummyMessages(action.roomId);
+    result.onSuccess((dummyMessages) {
+      store.dispatch(CreateDummyMessagesSuccessAction(action.roomId, dummyMessages));
+      store.dispatch(SetChatLoadingAction(false));
+    }).onFailure((error) {
+      store.dispatch(SetChatErrorAction('더미 메시지 생성 실패: ${error.message}'));
+      store.dispatch(SetChatLoadingAction(false));
     });
   };
 }

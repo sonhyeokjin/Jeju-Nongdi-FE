@@ -13,6 +13,8 @@ final chatReducer = combineReducers<ChatState>([
   TypedReducer<ChatState, ReceiveMessageAction>(_receiveMessage),
   TypedReducer<ChatState, GetOrCreateOneToOneRoomSuccessAction>(_getOrCreateOneToOneRoomSuccess),
   TypedReducer<ChatState, DeleteChatRoomSuccessAction>(_deleteChatRoomSuccess),
+  TypedReducer<ChatState, CreateDummyChatRoomsSuccessAction>(_createDummyChatRoomsSuccess),
+  TypedReducer<ChatState, CreateDummyMessagesSuccessAction>(_createDummyMessagesSuccess),
 ]);
 
 ChatState _setLoading(ChatState state, SetChatLoadingAction action) {
@@ -132,5 +134,38 @@ ChatState _deleteChatRoomSuccess(ChatState state, DeleteChatRoomSuccessAction ac
     messages: newMessages,
     currentPage: newCurrentPage,
     hasMoreMessages: newHasMoreMessages,
+  );
+}
+
+ChatState _createDummyChatRoomsSuccess(ChatState state, CreateDummyChatRoomsSuccessAction action) {
+  // 기존 채팅방과 더미 채팅방을 합치되, 중복 제거
+  final existingRoomIds = state.chatRooms.map((room) => room.roomId).toSet();
+  final uniqueDummyRooms = action.dummyChatRooms.where((room) => !existingRoomIds.contains(room.roomId)).toList();
+  final allChatRooms = [...state.chatRooms, ...uniqueDummyRooms];
+  
+  return state.copyWith(
+    isLoading: false,
+    chatRooms: allChatRooms,
+    error: null,
+  );
+}
+
+ChatState _createDummyMessagesSuccess(ChatState state, CreateDummyMessagesSuccessAction action) {
+  final newMessages = Map<String, List<MessageDto>>.from(state.messages);
+  newMessages[action.roomId] = action.dummyMessages;
+  
+  // 해당 채팅방에 대한 페이징 정보도 설정
+  final newCurrentPage = Map<String, int>.from(state.currentPage);
+  newCurrentPage[action.roomId] = 0;
+  
+  final newHasMoreMessages = Map<String, bool>.from(state.hasMoreMessages);
+  newHasMoreMessages[action.roomId] = false; // 더미 데이터는 페이징 없음
+  
+  return state.copyWith(
+    isLoading: false,
+    messages: newMessages,
+    currentPage: newCurrentPage,
+    hasMoreMessages: newHasMoreMessages,
+    error: null,
   );
 }
