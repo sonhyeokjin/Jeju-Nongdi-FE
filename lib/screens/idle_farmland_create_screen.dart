@@ -27,8 +27,8 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
   final _endDateController = TextEditingController(text: '2026-07-16');
   final _contactPhoneController = TextEditingController();
   final _contactEmailController = TextEditingController();
-  final _soilTypeController = TextEditingController(text: 'VOLCANIC');
-  final _usageTypeController = TextEditingController(text: 'SHORT_TERM_RENTAL');
+  String _selectedSoilType = 'VOLCANIC';
+  String _selectedUsageType = 'RICE';
 
   bool _waterSupply = true;
   bool _electricitySupply = true;
@@ -91,8 +91,6 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
     _endDateController.dispose();
     _contactPhoneController.dispose();
     _contactEmailController.dispose();
-    _soilTypeController.dispose();
-    _usageTypeController.dispose();
     super.dispose();
   }
 
@@ -111,8 +109,8 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
         availableEndDate: _endDateController.text,
         contactPhone: _contactPhoneController.text,
         contactEmail: _contactEmailController.text,
-        soilType: _soilTypeController.text,
-        usageType: _usageTypeController.text,
+        soilType: _selectedSoilType,
+        usageType: _selectedUsageType,
         waterSupply: _waterSupply,
         electricitySupply: _electricitySupply,
         farmingToolsIncluded: _farmingToolsIncluded,
@@ -135,7 +133,7 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(true);
         }
       },
       builder: (context, vm) {
@@ -198,7 +196,7 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
                 color: Color(0xFFF2711C),
                 size: 20,
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(context, true),
             ),
           ),
           const SizedBox(width: 16),
@@ -423,18 +421,20 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
               title: '추가 정보',
               icon: FontAwesomeIcons.clipboardList,
               children: [
-                _buildAnimatedTextField(
-                  controller: _soilTypeController,
+                _buildAnimatedDropdown(
                   label: '토양 종류',
                   icon: FontAwesomeIcons.mountain,
-                  hint: '예: VOLCANIC',
+                  value: _selectedSoilType,
+                  items: _getSoilTypeOptions(),
+                  onChanged: (value) => setState(() => _selectedSoilType = value!),
                 ),
                 const SizedBox(height: 16),
-                _buildAnimatedTextField(
-                  controller: _usageTypeController,
+                _buildAnimatedDropdown(
                   label: '사용 목적',
                   icon: FontAwesomeIcons.bullseye,
-                  hint: '예: SHORT_TERM_RENTAL',
+                  value: _selectedUsageType,
+                  items: _getUsageTypeOptions(),
+                  onChanged: (value) => setState(() => _selectedUsageType = value!),
                 ),
                 const SizedBox(height: 16),
                 _buildAnimatedTextField(
@@ -678,6 +678,109 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildAnimatedDropdown({
+    required String label,
+    required IconData icon,
+    required String value,
+    required List<DropdownMenuItem<String>> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return AnimatedBuilder(
+      animation: _slideController,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items,
+            onChanged: onChanged,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+            decoration: InputDecoration(
+              labelText: label,
+              prefixIcon: Container(
+                margin: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2711C).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: const Color(0xFFF2711C),
+                ),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFF2711C), width: 2),
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              labelStyle: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            dropdownColor: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            elevation: 8,
+          ),
+        );
+      },
+    );
+  }
+
+  List<DropdownMenuItem<String>> _getSoilTypeOptions() {
+    return [
+      const DropdownMenuItem(value: 'CLAY', child: Text('점토')),
+      const DropdownMenuItem(value: 'SANDY', child: Text('사질토')),
+      const DropdownMenuItem(value: 'LOAM', child: Text('양토')),
+      const DropdownMenuItem(value: 'SILT', child: Text('미사토')),
+      const DropdownMenuItem(value: 'HUMUS', child: Text('부엽토')),
+      const DropdownMenuItem(value: 'PEAT', child: Text('이탄토')),
+      const DropdownMenuItem(value: 'VOLCANIC', child: Text('화산토')),
+      const DropdownMenuItem(value: 'ALLUVIAL', child: Text('충적토')),
+    ];
+  }
+
+  List<DropdownMenuItem<String>> _getUsageTypeOptions() {
+    return [
+      const DropdownMenuItem(value: 'RICE', child: Text('벼농사')),
+      const DropdownMenuItem(value: 'VEGETABLE', child: Text('채소재배')),
+      const DropdownMenuItem(value: 'FRUIT', child: Text('과수재배')),
+      const DropdownMenuItem(value: 'FLOWER', child: Text('화훼재배')),
+      const DropdownMenuItem(value: 'GRAIN', child: Text('곡물재배')),
+      const DropdownMenuItem(value: 'HERB', child: Text('약초재배')),
+      const DropdownMenuItem(value: 'GREENHOUSE', child: Text('시설재배')),
+      const DropdownMenuItem(value: 'ORGANIC', child: Text('유기농재배')),
+      const DropdownMenuItem(value: 'PASTURE', child: Text('목초지')),
+      const DropdownMenuItem(value: 'EXPERIMENTAL', child: Text('시험재배')),
+      const DropdownMenuItem(value: 'MIXED', child: Text('혼합재배')),
+    ];
   }
 }
 

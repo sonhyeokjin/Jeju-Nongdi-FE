@@ -67,25 +67,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           color: const Color(0xFFF2711C),
                           onPressed: () {
                             final store = StoreProvider.of<AppState>(context, listen: false);
-                            // 멘토링 기반 채팅을 생성해보기 (멘토링 데이터의 첫 번째 항목 활용)
-                            final mentorings = store.state.mentoringState.mentorings;
-                            if (mentorings.isNotEmpty) {
-                              final firstMentoring = mentorings.first;
-                              store.dispatch(CreateChatRoomAction(
-                                chatType: "MENTORING",
-                                participantId: firstMentoring.author.id,
-                                referenceId: firstMentoring.id,
-                                initialMessage: "${firstMentoring.title} 멘토링 관련해서 문의드립니다.",
-                              ));
-                            } else {
-                              // 멘토링 데이터가 없으면 일반 채팅으로 다른 ID 시도
-                              store.dispatch(CreateChatRoomAction(
-                                chatType: "GENERAL",
-                                participantId: 3, // 다른 ID로 시도
-                                referenceId: 1,
-                                initialMessage: "안녕하세요!",
-                              ));
-                            }
+                            // 새로운 API 사용: 1:1 채팅방 생성 (예시 이메일)
+                            store.dispatch(GetOrCreateOneToOneRoomAction("example@test.com"));
                           },
                         ),
                       ),
@@ -162,7 +145,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 }
 
 class _ChatRoomTile extends StatelessWidget {
-  final ChatRoomResponse chatRoom;
+  final ChatRoomView chatRoom;
 
   const _ChatRoomTile({required this.chatRoom});
 
@@ -250,7 +233,7 @@ class _ChatRoomTile extends StatelessWidget {
 class _ViewModel {
   final bool isLoading;
   final String? error;
-  final List<ChatRoomResponse> chatRooms;
+  final List<ChatRoomView> chatRooms;
 
   _ViewModel({
     required this.isLoading,

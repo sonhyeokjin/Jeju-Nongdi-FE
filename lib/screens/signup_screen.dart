@@ -30,6 +30,9 @@ class SignupScreenState extends State<SignupScreen>
   String _phone = '';
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+  bool _isNicknameChecking = false;
+  bool _isNicknameAvailable = false;
+  String? _nicknameCheckMessage;
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -82,8 +85,45 @@ class SignupScreenState extends State<SignupScreen>
     });
   }
 
+  void _checkNickname() async {
+    if (_nicknameController.text.isEmpty) {
+      setState(() {
+        _nicknameCheckMessage = '닉네임을 입력해주세요';
+        _isNicknameAvailable = false;
+      });
+      return;
+    }
+
+    if (_nicknameController.text.length < 2 || _nicknameController.text.length > 12) {
+      setState(() {
+        _nicknameCheckMessage = '닉네임은 2-12자 사이여야 합니다';
+        _isNicknameAvailable = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isNicknameChecking = true;
+      _nicknameCheckMessage = null;
+    });
+
+    StoreProvider.of<AppState>(context, listen: false).dispatch(
+      CheckNicknameRequestAction(_nicknameController.text)
+    );
+  }
+
   void _signup() async {
     if (_formKey.currentState?.validate() ?? false) {
+      if (!_isNicknameAvailable) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('닉네임 중복 확인을 먼저 해주세요'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
       _formKey.currentState?.save();
       StoreProvider.of<AppState>(context, listen: false).dispatch(SignUpRequestAction(
         email: _email,
@@ -136,6 +176,20 @@ class SignupScreenState extends State<SignupScreen>
           Future.delayed(const Duration(milliseconds: 1500), () {
             if (context.mounted) {
               Navigator.of(context).pushReplacementNamed('/login');
+            }
+          });
+        }
+        
+        // 닉네임 중복 확인 결과 처리
+        if (previousState?.userState.isLoading == true && 
+            newState.userState.isLoading == false &&
+            mounted) {
+          setState(() {
+            _isNicknameChecking = false;
+            // Redux 상태에서 닉네임 확인 결과 가져오기
+            if (newState.userState.isNicknameAvailable != null) {
+              _isNicknameAvailable = newState.userState.isNicknameAvailable!;
+              _nicknameCheckMessage = newState.userState.nicknameCheckMessage;
             }
           });
         }
@@ -434,23 +488,7 @@ class SignupScreenState extends State<SignupScreen>
 
                                     const SizedBox(height: 18),
 
-                                    _buildStaggeredTextField(
-                                      index: 4,
-                                      controller: _nicknameController,
-                                      labelText: '닉네임',
-                                      hintText: '다른 사용자에게 보여질 이름',
-                                      icon: FontAwesomeIcons.at,
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return '닉네임을 입력해주세요';
-                                        }
-                                        if (value.length < 2 || value.length > 12) {
-                                          return '닉네임은 2-12자 사이여야 합니다';
-                                        }
-                                        return null;
-                                      },
-                                      onSaved: (value) => _nickname = value ?? '',
-                                    ),
+                                    _buildNicknameFieldWithCheck(4),
 
                                     const SizedBox(height: 18),
 
@@ -718,6 +756,197 @@ class SignupScreenState extends State<SignupScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNicknameFieldWithCheck(int index) {
+    return AnimatedBuilder(
+      animation: _staggerController,
+      builder: (context, child) {
+        final begin = (index * 0.1).clamp(0.0, 1.0);
+        final end = ((index * 0.1) + 0.7).clamp(0.0, 1.0);
+        final interval = Interval(
+          begin,
+          end > begin ? end : begin + 0.01,
+          curve: Curves.easeOutCubic,
+        );
+        
+        final slideAnimation = Tween<Offset>(
+          begin: const Offset(0, 0.3),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: _staggerController,
+          curve: interval,
+        ));
+
+        final fadeAnimation = Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(CurvedAnimation(
+          parent: _staggerController,
+          curve: interval,
+        ));
+
+        return SlideTransition(
+          position: slideAnimation,
+          child: FadeTransition(
+            opacity: fadeAnimation,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _nicknameController,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          onChanged: (value) {
+                            // 닉네임이 변경되면 중복 확인 상태 초기화
+                            setState(() {
+                              _isNicknameAvailable = false;
+                              _nicknameCheckMessage = null;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            labelText: '닉네임',
+                            hintText: '다른 사용자에게 보여질 이름',
+                            prefixIcon: Container(
+                              margin: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF2711C).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                FontAwesomeIcons.at,
+                                size: 18,
+                                color: Color(0xFFF2711C),
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: Color(0xFFF2711C), width: 2),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: Colors.red, width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                            labelStyle: TextStyle(
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                            hintStyle: TextStyle(
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return '닉네임을 입력해주세요';
+                            }
+                            if (value.length < 2 || value.length > 12) {
+                              return '닉네임은 2-12자 사이여야 합니다';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) => _nickname = value ?? '',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            colors: [
+                              _isNicknameAvailable ? Colors.green : const Color(0xFFF2711C),
+                              _isNicknameAvailable ? Colors.green[400]! : const Color(0xFFFF8C42),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_isNicknameAvailable ? Colors.green : const Color(0xFFF2711C)).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isNicknameChecking ? null : _checkNickname,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                          ),
+                          child: _isNicknameChecking
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  _isNicknameAvailable 
+                                      ? FontAwesomeIcons.check 
+                                      : FontAwesomeIcons.magnifyingGlass,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_nicknameCheckMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 8),
+                    child: Text(
+                      _nicknameCheckMessage!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _isNicknameAvailable ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

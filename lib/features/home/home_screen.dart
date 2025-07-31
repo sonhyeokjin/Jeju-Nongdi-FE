@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/job_posting_model.dart';
-import 'package:jejunongdi/core/models/place_search_models.dart';
 import 'package:jejunongdi/core/services/job_posting_service.dart';
-import 'package:jejunongdi/core/services/place_search_service.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/screens/job_list_screen.dart';
@@ -14,6 +12,7 @@ import 'package:jejunongdi/screens/login_screen.dart';
 import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
 import 'package:jejunongdi/screens/job_posting_create_screen.dart';
 import 'package:jejunongdi/screens/ai_assistant_screen.dart';
+import 'dart:math' as math;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,17 +26,16 @@ class _HomeScreenState extends State<HomeScreen> {
   NaverMapController? _controller;
   final Set<NMarker> _markers = {};
   List<JobPostingResponse> _jobPostings = [];
-  List<NaverPlace> _farms = [];
   final JobPostingService _jobPostingService = JobPostingService.instance;
-  final PlaceSearchService _placeSearchService = PlaceSearchService.instance;
   Timer? _debounceTimer;
   bool _isLoading = false;
-  bool _showFarms = true; // 농장 표시 여부
   double _sheetExtent = 0.3;
 
   // 웹용 설정
   static const double _initialLat = 33.375;
   static const double _initialLng = 126.49;
+  static const int _initialZoom = 11;
+
 
   static const NLatLng _initialPosition = NLatLng(_initialLat, _initialLng);
 
@@ -45,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadJobPostingsForCurrentView();
-    _loadFarmsForCurrentView();
   }
 
   @override
@@ -55,6 +52,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // 기존 NaverMap 관련 메서드들
+  void _onWebMarkerClick(JobPostingResponse jobPosting) {
+    final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
+        .state
+        .userState
+        .isAuthenticated;
+
+    if (isAuthenticated) {
+      _showJobPostingDetails(jobPosting);
+    } else {
+      _showLoginRequiredDialog();
+    }
+  }
   void _onMapReady(NaverMapController controller) {
     _controller = controller;
     Logger.info('네이버 지도 초기화 완료');
@@ -70,9 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 800), () {
       _loadJobPostingsForCurrentView();
-      if (_showFarms) {
-        _loadFarmsForCurrentView();
-      }
     });
   }
 
@@ -160,10 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
           );
 
           marker.setOnTapListener((NMarker marker) {
-            final isAuthenticated = StoreProvider.of<AppState>(
-              context,
-              listen: false,
-            ).state.userState.isAuthenticated;
+            final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
+                .state
+                .userState
+                .isAuthenticated;
 
             if (isAuthenticated) {
               _showJobPostingDetails(jobPosting);
@@ -220,256 +226,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _loadFarmsForCurrentView() async {
-    if (!mounted || !_showFarms) return;
-
-    try {
-      double minLat, maxLat, minLng, maxLng;
-
-      if (kIsWeb) {
-        // 웹: 기본 범위 사용 (제주도 전체)
-        const latRange = 0.3;
-        const lngRange = 0.4;
-        minLat = _initialLat - latRange;
-        maxLat = _initialLat + latRange;
-        minLng = _initialLng - lngRange;
-        maxLng = _initialLng + lngRange;
-      } else {
-        // 앱: NaverMapController에서 bounds 가져오기
-        if (_controller == null) return;
-        final bounds = await _controller!.getContentBounds();
-
-        minLat = bounds.southWest.latitude;
-        maxLat = bounds.northEast.latitude;
-        minLng = bounds.southWest.longitude;
-        maxLng = bounds.northEast.longitude;
-      }
-
-      final farms = await _placeSearchService.searchFarmsInBounds(
-        minLat: minLat,
-        maxLat: maxLat,
-        minLng: minLng,
-        maxLng: maxLng,
-      );
-
-      if (mounted) {
-        setState(() {
-          _farms = farms;
-        });
-
-        if (!kIsWeb) {
-          await _updateFarmMarkers(farms);
-        }
-      }
-    } catch (e) {
-      Logger.error('현재 영역 농장 로드 실패', error: e);
-    }
-  }
-
-  Future<void> _updateFarmMarkers(List<NaverPlace> farms) async {
-    if (_controller == null || kIsWeb) return;
-
-    try {
-      // 기존 농장 마커들 제거 (farm_으로 시작하는 마커들)
-      final farmMarkers = _markers
-          .where((marker) => marker.info.id.startsWith('farm_'))
-          .toList();
-      for (final marker in farmMarkers) {
-        await _controller!.deleteOverlay(marker.info);
-        _markers.remove(marker);
-      }
-
-      // 새 농장 마커들 추가
-      for (final farm in farms) {
-        try {
-          final marker = NMarker(
-            id: 'farm_${farm.hashCode}',
-            position: NLatLng(farm.latitude, farm.longitude),
-            caption: NOverlayCaption(
-              text: farm.cleanTitle.length > 10
-                  ? '${farm.cleanTitle.substring(0, 10)}...'
-                  : farm.cleanTitle,
-              textSize: 11,
-              color: Colors.white,
-              haloColor: Colors.green,
-            ),
-          );
-
-          marker.setOnTapListener((NMarker marker) {
-            _showFarmDetails(farm);
-          });
-
-          _markers.add(marker);
-          await _controller!.addOverlay(marker);
-        } catch (e) {
-          Logger.error('농장 마커 생성 실패: ${farm.cleanTitle}', error: e);
-        }
-      }
-      Logger.info('농장 마커 업데이트 완료: ${farms.length}개');
-    } catch (e) {
-      Logger.error('농장 마커 업데이트 실패', error: e);
-    }
-  }
-
-  void _showFarmDetails(NaverPlace farm) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.agriculture,
-                    color: Colors.green,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    farm.cleanTitle,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (farm.cleanCategory.isNotEmpty) ...[
-              Row(
-                children: [
-                  const Icon(Icons.category, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Text(
-                    farm.cleanCategory,
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-            if (farm.cleanDescription.isNotEmpty) ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      farm.cleanDescription,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-            if (farm.address.isNotEmpty) ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      farm.address,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-            if (farm.telephone.isNotEmpty) ...[
-              Row(
-                children: [
-                  const Icon(Icons.phone, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Text(farm.telephone, style: const TextStyle(fontSize: 14)),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      if (_controller != null && !kIsWeb) {
-                        _controller!.updateCamera(
-                          NCameraUpdate.fromCameraPosition(
-                            NCameraPosition(
-                              target: NLatLng(farm.latitude, farm.longitude),
-                              zoom: 15.0,
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.my_location),
-                    label: const Text('위치 보기'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _toggleFarmDisplay() {
-    setState(() {
-      _showFarms = !_showFarms;
-    });
-
-    if (_showFarms) {
-      _loadFarmsForCurrentView();
-    } else if (!kIsWeb) {
-      // 농장 마커들 제거
-      final farmMarkers = _markers
-          .where((marker) => marker.info.id.startsWith('farm_'))
-          .toList();
-      for (final marker in farmMarkers) {
-        _controller?.deleteOverlay(marker.info);
-        _markers.remove(marker);
-      }
-    }
-  }
-
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -489,14 +245,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (kIsWeb) {
       // 웹에서는 데이터 새로고침만 수행
       _loadJobPostingsForCurrentView();
-      if (_showFarms) {
-        _loadFarmsForCurrentView();
-      }
     } else {
       if (_controller != null) {
         _controller!.updateCamera(
           NCameraUpdate.fromCameraPosition(
-            const NCameraPosition(target: _initialPosition, zoom: 11.0),
+            const NCameraPosition(
+              target: _initialPosition,
+              zoom: 11.0,
+            ),
           ),
         );
       }
@@ -523,10 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 10.0,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -543,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: Colors.black12,
                                   blurRadius: 8,
                                   offset: Offset(0, 2),
-                                ),
+                                )
                               ],
                             ),
                             child: Padding(
@@ -589,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     color: Colors.black12,
                                     blurRadius: 8,
                                     offset: Offset(0, 2),
-                                  ),
+                                  )
                                 ],
                               ),
                               child: const SizedBox(
@@ -597,9 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFFF2711C),
-                                  ),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF2711C)),
                                 ),
                               ),
                             ),
@@ -613,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.black12,
                                 blurRadius: 8,
                                 offset: Offset(0, 2),
-                              ),
+                              )
                             ],
                           ),
                           child: Row(
@@ -623,32 +374,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: const Icon(Icons.my_location, size: 26),
                                 color: const Color(0xFFF2711C),
                               ),
-                              Container(
-                                height: 20,
-                                width: 1,
-                                color: Colors.grey[300],
-                              ),
+                              Container(height: 20, width: 1, color: Colors.grey[300]),
                               IconButton(
                                 onPressed: _loadJobPostingsForCurrentView,
                                 icon: const Icon(Icons.refresh, size: 26),
                                 color: const Color(0xFFF2711C),
                               ),
-                              Container(
-                                height: 20,
-                                width: 1,
-                                color: Colors.grey[300],
-                              ),
-                              // IconButton(
-                              //   onPressed: _toggleFarmDisplay,
-                              //   icon: Icon(
-                              //     _showFarms
-                              //         ? Icons.agriculture
-                              //         : Icons.agriculture_outlined,
-                              //     size: 26,
-                              //   ),
-                              //   color: _showFarms ? Colors.green : Colors.grey,
-                              //   tooltip: _showFarms ? '농장 숨기기' : '농장 보기',
-                              // ),
                             ],
                           ),
                         ),
@@ -661,123 +392,60 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned(
               top: 130,
               right: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.95),
-                          Colors.grey[50]!.withValues(alpha: 0.95),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(
-                        color: const Color(0xFFF2711C).withValues(alpha: 0.2),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFF2711C), Color(0xFFFF8C42)],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.work_outline,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '일자리 ${_jobPostings.length}개',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2D2D2D),
-                          ),
-                        ),
-                      ],
-                    ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.95),
+                      Colors.grey[50]!.withOpacity(0.95),
+                    ],
                   ),
-                  if (_showFarms) ...[
-                    const SizedBox(height: 8),
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(
+                    color: const Color(0xFFF2711C).withOpacity(0.2),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
+                      width: 24,
+                      height: 24,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           colors: [
-                            Colors.white.withValues(alpha: 0.95),
-                            Colors.green[50]!.withValues(alpha: 0.95),
+                            Color(0xFFF2711C),
+                            Color(0xFFFF8C42),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: Colors.green.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Colors.green, Color(0xFF66BB6A)],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.agriculture,
-                              size: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '농장 ${_farms.length}개',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF2D2D2D),
-                            ),
-                          ),
-                        ],
+                      child: const Icon(
+                        Icons.work_outline,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '현재 ${_jobPostings.length}개의 일자리가 있습니다',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2D2D2D),
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
             DraggableScrollableSheet(
@@ -787,167 +455,145 @@ class _HomeScreenState extends State<HomeScreen> {
               expand: true,
               snap: true,
               snapSizes: const [0.1, 0.3, 0.8],
-              builder:
-                  (BuildContext context, ScrollController scrollController) {
-                    return Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(24),
+              builder: (BuildContext context, ScrollController scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, -2),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 10,
-                            offset: Offset(0, -2),
-                          ),
-                        ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              margin: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              controller: scrollController,
-                              child: Padding(
-                                padding: const EdgeInsets.all(24.0),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Container(
-                                      height: 64,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(16),
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            Color(0xFFF2711C),
-                                            Color(0xFFFF8C42),
-                                          ],
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFFF2711C,
-                                            ).withValues(alpha: 0.3),
-                                            blurRadius: 20,
-                                            offset: const Offset(0, 8),
-                                          ),
-                                        ],
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: scrollController,
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFFF2711C),
+                                        Color(0xFFFF8C42),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFFF2711C).withValues(alpha: 0.3),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
                                       ),
-                                      child: ElevatedButton(
-                                        onPressed: _navigateToJobList,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              16,
-                                            ),
-                                          ),
-                                        ),
-                                        child: const Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.search,
-                                              color: Colors.white,
-                                            ),
-                                            SizedBox(width: 12),
-                                            Text(
-                                              '일자리 찾기',
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.white,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: _navigateToJobList,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
                                       ),
                                     ),
-                                    const SizedBox(height: 16),
-                                    Container(
-                                      height: 64,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(16),
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.white,
-                                            Colors.grey[50]!,
-                                          ],
-                                        ),
-                                        border: Border.all(
-                                          color: const Color(
-                                            0xFFF2711C,
-                                          ).withValues(alpha: 0.3),
-                                          width: 2,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.05,
-                                            ),
-                                            blurRadius: 15,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: ElevatedButton(
-                                        onPressed: _showWorkerRecruit,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              16,
-                                            ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.search, color: Colors.white),
+                                        SizedBox(width: 12),
+                                        Text(
+                                          '일자리 찾기',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
                                           ),
                                         ),
-                                        child: const Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.people,
-                                              color: Color(0xFFF2711C),
-                                            ),
-                                            SizedBox(width: 12),
-                                            Text(
-                                              '일손 구하기',
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w700,
-                                                color: Color(0xFFF2711C),
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.white,
+                                        Colors.grey[50]!,
+                                      ],
+                                    ),
+                                    border: Border.all(
+                                      color: const Color(0xFFF2711C).withValues(alpha: 0.3),
+                                      width: 2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.05),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: _showWorkerRecruit,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.people, color: Color(0xFFF2711C)),
+                                        SizedBox(width: 12),
+                                        Text(
+                                          '일손 구하기',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFFF2711C),
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -989,7 +635,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -1009,7 +655,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (loadingProgress == null) return child;
                 return Container(
                   color: Colors.grey[200],
-                  child: const Center(child: CircularProgressIndicator()),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
                 );
               },
               errorBuilder: (context, error, stackTrace) {
@@ -1035,7 +683,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Colors.white.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
@@ -1052,49 +700,20 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned(
               bottom: 8,
               right: 8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '일자리: ${_jobPostings.length}개',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFF2711C),
-                      ),
-                    ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '일자리: ${_jobPostings.length}개',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFF2711C),
                   ),
-                  if (_showFarms) ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '농장: ${_farms.length}개',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
             // 클릭 가능한 영역
@@ -1105,9 +724,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () {
                     // 지도 클릭 시 새로고침
                     _loadJobPostingsForCurrentView();
-                    if (_showFarms) {
-                      _loadFarmsForCurrentView();
-                    }
                   },
                   child: Container(),
                 ),
@@ -1120,29 +736,31 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showWorkerRecruit() {
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (context) => const JobPostingCreateScreen(),
-          ),
-        )
-        .then((success) {
-          if (success == true) {
-            _loadJobPostingsForCurrentView();
-          }
-        });
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const JobPostingCreateScreen(),
+      ),
+    ).then((success) {
+      if (success == true) {
+        _loadJobPostingsForCurrentView();
+      }
+    });
   }
 
   void _navigateToJobList() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const JobListScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const JobListScreen(),
+      ),
+    );
   }
 
   void _navigateToAiAssistant() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const AiAssistantScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AiAssistantScreen(),
+      ),
+    );
   }
 }
 
@@ -1151,12 +769,15 @@ class SpeechBubblePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFFF2711C), Color(0xFFFF8C42)],
+        colors: [
+          Color(0xFFF2711C),
+          Color(0xFFFF8C42),
+        ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..style = PaintingStyle.fill;
 
     final shadowPaint = Paint()
-      ..color = const Color(0xFFF2711C).withValues(alpha: 0.3)
+      ..color = const Color(0xFFF2711C).withOpacity(0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
     final path = Path();
@@ -1164,12 +785,10 @@ class SpeechBubblePainter extends CustomPainter {
     final arrowSize = 8.0;
 
     // 말풍선 본체 (둥근 사각형)
-    path.addRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(arrowSize, 0, size.width - arrowSize, size.height),
-        Radius.circular(radius),
-      ),
-    );
+    path.addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(arrowSize, 0, size.width - arrowSize, size.height),
+      Radius.circular(radius),
+    ));
 
     // 왼쪽 화살표 (돌하르방을 가리키는)
     path.moveTo(arrowSize, size.height * 0.5 - arrowSize * 0.5);
@@ -1179,7 +798,7 @@ class SpeechBubblePainter extends CustomPainter {
 
     // 그림자 그리기
     canvas.drawPath(path, shadowPaint);
-
+    
     // 말풍선 그리기
     canvas.drawPath(path, paint);
   }

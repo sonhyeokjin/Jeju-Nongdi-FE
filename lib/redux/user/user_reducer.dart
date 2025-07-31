@@ -13,6 +13,16 @@ UserState userReducer(UserState state, dynamic action) {
     );
   }
   
+  if (action is CheckNicknameRequestAction) {
+    // 닉네임 중복 확인 시작 시 기존 결과 초기화
+    return state.copyWith(
+      isLoading: true,
+      isNicknameAvailable: null,
+      nicknameCheckMessage: null,
+      errorMessage: null,
+    );
+  }
+  
   if (action is SetUserErrorAction) {
     return state.copyWith(
       authStatus: AuthStatus.error,
@@ -75,6 +85,26 @@ UserState userReducer(UserState state, dynamic action) {
       accessToken: action.accessToken,
       refreshToken: action.refreshToken,
     );
+  }
+  
+  if (action is CheckNicknameSuccessAction) {
+    return state.copyWith(
+      isNicknameAvailable: action.available,
+      nicknameCheckMessage: action.message,
+      isLoading: false,
+    );
+  }
+  
+  if (action is UpdateNicknameSuccessAction) {
+    // 닉네임 변경 성공 후 사용자 정보 업데이트
+    if (state.user != null) {
+      final updatedUser = state.user!.copyWith(nickname: action.nickname);
+      return state.copyWith(
+        user: updatedUser,
+        isLoading: false,
+      );
+    }
+    return state.copyWith(isLoading: false);
   }
   
   return state;

@@ -10,7 +10,6 @@
 build/
 
 # Generated files (code generation)
-**/*.g.dart
 **/*.freezed.dart
 **/*.gr.dart
 

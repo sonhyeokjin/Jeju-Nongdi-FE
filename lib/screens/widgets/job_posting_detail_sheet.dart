@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/job_posting_model.dart';
+import 'package:jejunongdi/redux/app_state.dart';
+import 'package:jejunongdi/redux/chat/chat_actions.dart';
+import 'package:jejunongdi/screens/chat_room_screen.dart';
 
 class JobPostingDetailSheet extends StatelessWidget {
   final JobPostingResponse jobPosting;
@@ -143,23 +147,42 @@ class JobPostingDetailSheet extends StatelessWidget {
                   
                   // 하단 버튼
                   const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      icon: const Icon(Icons.close),
-                      label: const Text('닫기'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[600],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _startChatWithJobOwner(context, jobPosting),
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          label: const Text('채팅하기'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF2711C),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          icon: const Icon(Icons.close),
+                          label: const Text('닫기'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey[600],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -235,5 +258,62 @@ class JobPostingDetailSheet extends StatelessWidget {
       default:
         return Colors.grey;
     }
+  }
+
+  void _startChatWithJobOwner(BuildContext context, JobPostingResponse job) async {
+    final store = StoreProvider.of<AppState>(context, listen: false);
+    final user = store.state.userState.user;
+    
+    if (user == null) {
+      _showLoginRequiredDialog(context);
+      return;
+    }
+    
+    if (job.author.email?.isEmpty ?? true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('일자리 작성자의 연락처 정보가 없습니다.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    store.dispatch(GetOrCreateOneToOneRoomAction(job.author.email!));
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      Navigator.of(context).pop(); // 상세 시트 닫기
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ChatRoomScreen(
+            roomId: job.author.email!,
+            roomName: job.author.nickname,
+          ),
+        ),
+      );
+    });
+  }
+
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('로그인 필요'),
+        content: const Text('채팅을 하려면 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              // 로그인 페이지로 이동 로직 필요
+            },
+            child: const Text('로그인'),
+          ),
+        ],
+      ),
+    );
   }
 }

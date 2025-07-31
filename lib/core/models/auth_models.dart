@@ -92,3 +92,72 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
   Map<String, dynamic> toJson() => _$UserToJson(this);
 }
+
+@JsonSerializable()
+class CheckNicknameRequest {
+  final String nickname;
+
+  CheckNicknameRequest({
+    required this.nickname,
+  });
+
+  factory CheckNicknameRequest.fromJson(Map<String, dynamic> json) =>
+      _$CheckNicknameRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$CheckNicknameRequestToJson(this);
+}
+
+@JsonSerializable()
+class CheckNicknameResponse {
+  final bool available;
+  final String message;
+
+  CheckNicknameResponse({
+    required this.available,
+    required this.message,
+  });
+
+  factory CheckNicknameResponse.fromJson(Map<String, dynamic> json) =>
+      _$CheckNicknameResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$CheckNicknameResponseToJson(this);
+}
+
+@JsonSerializable()
+class UpdatePasswordRequest {
+  final String currentPassword;
+  final String newPassword;
+
+  UpdatePasswordRequest({
+    required this.currentPassword,
+    required this.newPassword,
+  });
+
+  factory UpdatePasswordRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdatePasswordRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$UpdatePasswordRequestToJson(this);
+}
+
+@JsonSerializable()
+class UpdateNicknameRequest {
+  final String nickname;
+
+  UpdateNicknameRequest({
+    required this.nickname,
+  });
+
+  factory UpdateNicknameRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdateNicknameRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$UpdateNicknameRequestToJson(this);
+}
+
+@JsonSerializable()
+class UpdateProfileImageRequest {
+  final String profileImage;
+
+  UpdateProfileImageRequest({
+    required this.profileImage,
+  });
+
+  factory UpdateProfileImageRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdateProfileImageRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$UpdateProfileImageRequestToJson(this);
+}

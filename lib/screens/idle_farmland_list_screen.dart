@@ -120,58 +120,183 @@ class _IdleFarmlandListScreenState extends State<IdleFarmlandListScreen>
           ),
         ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
   Widget _buildCustomAppBar() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    FontAwesomeIcons.arrowLeft,
+                    color: Color(0xFFF2711C),
+                    size: 20,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '유휴 농지 🌾',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFF2711C),
+                      ),
+                    ),
+                    Text(
+                      '농지를 찾아보세요',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        _buildActionButtons(),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      margin: const EdgeInsets.symmetric(horizontal: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                // 농지 관리 기능
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      FontAwesomeIcons.seedling,
+                      color: Colors.grey[600],
+                      size: 20,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '농지 관리',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(
-                FontAwesomeIcons.arrowLeft,
-                color: Color(0xFFF2711C),
-                size: 20,
               ),
-              onPressed: () => Navigator.pop(context),
             ),
           ),
-          const SizedBox(width: 16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '유휴 농지 🌾',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFFF2711C),
-                  ),
+            child: InkWell(
+              onTap: () {
+                // 필터 기능
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      FontAwesomeIcons.filter,
+                      color: Colors.grey[600],
+                      size: 20,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '필터',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  '농지를 찾아보세요',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const IdleFarmlandCreateScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2711C),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(
+                        FontAwesomeIcons.plus,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      '농지 추가',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFF2711C),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -214,7 +339,7 @@ class _IdleFarmlandListScreenState extends State<IdleFarmlandListScreen>
       color: const Color(0xFFF2711C),
       child: ListView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 80),
         itemCount: vm.farmlands.length + (vm.hasMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == vm.farmlands.length) {
@@ -269,41 +394,7 @@ class _IdleFarmlandListScreenState extends State<IdleFarmlandListScreen>
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFF2711C),
-            Color(0xFFFF8C42),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFF2711C).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: FloatingActionButton(
-        heroTag: "idle_farmland_fab",
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const IdleFarmlandCreateScreen()),
-          );
-        },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const Icon(
-          FontAwesomeIcons.plus,
-          color: Colors.white,
-          size: 24,
-        ),
-      ),
-    );
-  }
+
 }
 
 class _FarmlandCard extends StatelessWidget {

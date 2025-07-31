@@ -4,6 +4,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:jejunongdi/core/models/job_posting_model.dart';
 import 'package:jejunongdi/core/services/job_posting_service.dart';
+import 'package:jejunongdi/core/models/chat_models.dart';
+import 'package:jejunongdi/redux/chat/chat_actions.dart';
+import 'package:flutter_redux/flutter_redux.dart';
+import 'package:jejunongdi/redux/app_state.dart';
 
 class JobPostingDetailScreen extends StatefulWidget {
   final int jobPostingId;
@@ -114,6 +118,29 @@ class _JobPostingDetailScreenState extends State<JobPostingDetailScreen> {
               },
             ),
           ),
+          actions: [
+            StoreConnector<AppState, VoidCallback>(
+              converter: (store) => () {
+                // 새로운 API 사용: 1:1 채팅방 생성 (작성자 이메일로)
+                final email = posting.author.email;
+                if (email != null && email.isNotEmpty) {
+                  store.dispatch(GetOrCreateOneToOneRoomAction(email));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('채팅방을 생성하고 있습니다...')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('작성자 이메일 정보가 없어 채팅을 시작할 수 없습니다.')),
+                  );
+                }
+              },
+              builder: (context, startChat) => IconButton(
+                icon: const Icon(Icons.chat, color: Colors.white),
+                onPressed: startChat,
+                tooltip: '채팅하기',
+              ),
+            ),
+          ],
         ),
         SliverToBoxAdapter(
           child: Padding(

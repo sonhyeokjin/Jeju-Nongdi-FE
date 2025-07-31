@@ -13,11 +13,19 @@ class SetChatErrorAction {
   SetChatErrorAction(this.error);
 }
 
+// --- WebSocket 연결 정보 관련 액션 ---
+class LoadWebSocketInfoAction {}
+
+class LoadWebSocketInfoSuccessAction {
+  final WebSocketConnectionInfo wsInfo;
+  LoadWebSocketInfoSuccessAction(this.wsInfo);
+}
+
 // --- 채팅방 목록 관련 액션 ---
 class LoadChatRoomsAction {}
 
 class LoadChatRoomsSuccessAction {
-  final List<ChatRoomResponse> chatRooms;
+  final List<ChatRoomView> chatRooms;
   LoadChatRoomsSuccessAction(this.chatRooms);
 }
 
@@ -30,7 +38,7 @@ class LoadChatMessagesAction {
 
 class LoadChatMessagesSuccessAction {
   final String roomId;
-  final List<ChatMessageResponse> messages;
+  final List<MessageDto> messages;
   final bool hasMore;
   final int page;
   LoadChatMessagesSuccessAction({
@@ -51,55 +59,28 @@ class SendMessageAction {
 // --- 실시간 메시지 수신 액션 ---
 // WebSocket 등에서 새 메시지를 받았을 때 사용
 class ReceiveMessageAction {
-  final ChatMessageResponse message;
+  final MessageDto message;
   ReceiveMessageAction(this.message);
 }
 
-class CreateChatRoomAction {
-  final String chatType;
-  final int participantId;
-  final int referenceId;
-  final String? initialMessage;
-  
-  CreateChatRoomAction({
-    required this.chatType,
-    required this.participantId,
-    required this.referenceId,
-    this.initialMessage,
-  });
+// --- 1:1 채팅방 생성/조회 관련 액션 ---
+class GetOrCreateOneToOneRoomAction {
+  final String targetEmail;
+  GetOrCreateOneToOneRoomAction(this.targetEmail);
 }
 
-class CreateChatRoomSuccessAction {
-  final ChatRoomResponse newRoom;
-  CreateChatRoomSuccessAction(this.newRoom);
+class GetOrCreateOneToOneRoomSuccessAction {
+  final ChatRoomDto chatRoom;
+  GetOrCreateOneToOneRoomSuccessAction(this.chatRoom);
 }
 
-// --- 메시지 읽음 처리 관련 액션 ---
-class MarkMessagesAsReadAction {
+// --- 채팅방 삭제 관련 액션 ---
+class DeleteChatRoomAction {
   final String roomId;
-  MarkMessagesAsReadAction(this.roomId);
+  DeleteChatRoomAction(this.roomId);
 }
 
-class MarkMessagesAsReadSuccessAction {
+class DeleteChatRoomSuccessAction {
   final String roomId;
-  MarkMessagesAsReadSuccessAction(this.roomId);
-}
-
-// --- 채팅방 입장/나가기 관련 액션 ---
-class EnterChatRoomAction {
-  final String roomId;
-  EnterChatRoomAction(this.roomId);
-}
-
-class LeaveChatRoomAction {
-  final String roomId;
-  LeaveChatRoomAction(this.roomId);
-}
-
-// --- 파일 메시지 전송 관련 액션 ---
-class SendFileMessageAction {
-  final String roomId;
-  final String filePath;
-  final String? content;
-  SendFileMessageAction(this.roomId, this.filePath, {this.content});
+  DeleteChatRoomSuccessAction(this.roomId);
 }
