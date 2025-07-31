@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/job_posting_model.dart';
+import 'package:jejunongdi/core/models/place_search_models.dart';
 import 'package:jejunongdi/core/services/job_posting_service.dart';
+import 'package:jejunongdi/core/services/place_search_service.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/screens/job_list_screen.dart';
@@ -25,9 +27,12 @@ class _HomeScreenState extends State<HomeScreen> {
   NaverMapController? _controller;
   final Set<NMarker> _markers = {};
   List<JobPostingResponse> _jobPostings = [];
+  List<NaverPlace> _farms = [];
   final JobPostingService _jobPostingService = JobPostingService.instance;
+  final PlaceSearchService _placeSearchService = PlaceSearchService.instance;
   Timer? _debounceTimer;
   bool _isLoading = false;
+  bool _showFarms = true; // 농장 표시 여부
   double _sheetExtent = 0.3;
 
   // 웹용 설정
@@ -40,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadJobPostingsForCurrentView();
+    _loadFarmsForCurrentView();
   }
 
   @override
@@ -64,6 +70,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 800), () {
       _loadJobPostingsForCurrentView();
+      if (_showFarms) {
+        _loadFarmsForCurrentView();
+      }
     });
   }
 
@@ -211,6 +220,256 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _loadFarmsForCurrentView() async {
+    if (!mounted || !_showFarms) return;
+
+    try {
+      double minLat, maxLat, minLng, maxLng;
+
+      if (kIsWeb) {
+        // 웹: 기본 범위 사용 (제주도 전체)
+        const latRange = 0.3;
+        const lngRange = 0.4;
+        minLat = _initialLat - latRange;
+        maxLat = _initialLat + latRange;
+        minLng = _initialLng - lngRange;
+        maxLng = _initialLng + lngRange;
+      } else {
+        // 앱: NaverMapController에서 bounds 가져오기
+        if (_controller == null) return;
+        final bounds = await _controller!.getContentBounds();
+
+        minLat = bounds.southWest.latitude;
+        maxLat = bounds.northEast.latitude;
+        minLng = bounds.southWest.longitude;
+        maxLng = bounds.northEast.longitude;
+      }
+
+      final farms = await _placeSearchService.searchFarmsInBounds(
+        minLat: minLat,
+        maxLat: maxLat,
+        minLng: minLng,
+        maxLng: maxLng,
+      );
+
+      if (mounted) {
+        setState(() {
+          _farms = farms;
+        });
+
+        if (!kIsWeb) {
+          await _updateFarmMarkers(farms);
+        }
+      }
+    } catch (e) {
+      Logger.error('현재 영역 농장 로드 실패', error: e);
+    }
+  }
+
+  Future<void> _updateFarmMarkers(List<NaverPlace> farms) async {
+    if (_controller == null || kIsWeb) return;
+
+    try {
+      // 기존 농장 마커들 제거 (farm_으로 시작하는 마커들)
+      final farmMarkers = _markers
+          .where((marker) => marker.info.id.startsWith('farm_'))
+          .toList();
+      for (final marker in farmMarkers) {
+        await _controller!.deleteOverlay(marker.info);
+        _markers.remove(marker);
+      }
+
+      // 새 농장 마커들 추가
+      for (final farm in farms) {
+        try {
+          final marker = NMarker(
+            id: 'farm_${farm.hashCode}',
+            position: NLatLng(farm.latitude, farm.longitude),
+            caption: NOverlayCaption(
+              text: farm.cleanTitle.length > 10
+                  ? '${farm.cleanTitle.substring(0, 10)}...'
+                  : farm.cleanTitle,
+              textSize: 11,
+              color: Colors.white,
+              haloColor: Colors.green,
+            ),
+          );
+
+          marker.setOnTapListener((NMarker marker) {
+            _showFarmDetails(farm);
+          });
+
+          _markers.add(marker);
+          await _controller!.addOverlay(marker);
+        } catch (e) {
+          Logger.error('농장 마커 생성 실패: ${farm.cleanTitle}', error: e);
+        }
+      }
+      Logger.info('농장 마커 업데이트 완료: ${farms.length}개');
+    } catch (e) {
+      Logger.error('농장 마커 업데이트 실패', error: e);
+    }
+  }
+
+  void _showFarmDetails(NaverPlace farm) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.agriculture,
+                    color: Colors.green,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    farm.cleanTitle,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (farm.cleanCategory.isNotEmpty) ...[
+              Row(
+                children: [
+                  const Icon(Icons.category, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    farm.cleanCategory,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (farm.cleanDescription.isNotEmpty) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      farm.cleanDescription,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (farm.address.isNotEmpty) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      farm.address,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (farm.telephone.isNotEmpty) ...[
+              Row(
+                children: [
+                  const Icon(Icons.phone, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(farm.telephone, style: const TextStyle(fontSize: 14)),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      if (_controller != null && !kIsWeb) {
+                        _controller!.updateCamera(
+                          NCameraUpdate.fromCameraPosition(
+                            NCameraPosition(
+                              target: NLatLng(farm.latitude, farm.longitude),
+                              zoom: 15.0,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.my_location),
+                    label: const Text('위치 보기'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _toggleFarmDisplay() {
+    setState(() {
+      _showFarms = !_showFarms;
+    });
+
+    if (_showFarms) {
+      _loadFarmsForCurrentView();
+    } else if (!kIsWeb) {
+      // 농장 마커들 제거
+      final farmMarkers = _markers
+          .where((marker) => marker.info.id.startsWith('farm_'))
+          .toList();
+      for (final marker in farmMarkers) {
+        _controller?.deleteOverlay(marker.info);
+        _markers.remove(marker);
+      }
+    }
+  }
+
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -230,6 +489,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (kIsWeb) {
       // 웹에서는 데이터 새로고침만 수행
       _loadJobPostingsForCurrentView();
+      if (_showFarms) {
+        _loadFarmsForCurrentView();
+      }
     } else {
       if (_controller != null) {
         _controller!.updateCamera(
