@@ -457,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(23),
                           ),
                           child: Image.asset(
-                            'lib/assets/images/dol_hareubang_emti.png',
+                            'lib/assets/images/ai_assistant_image.png',
                             height: 32,
                             width: 32,
                             fit: BoxFit.contain,
@@ -874,6 +874,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 onPressed: _selectedTabIndex == 0 ? _showWorkerRecruit : _navigateToIdleFarmlandCreate,
                                 backgroundColor: const Color(0xFFF2711C),
                                 foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(64),
+                                ),
                                 icon: Icon(
                                   _selectedTabIndex == 0 ? Icons.add : Icons.add_location,
                                   size: 24,

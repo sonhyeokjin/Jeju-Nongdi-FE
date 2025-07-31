@@ -1,9 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/ai_tip_model.dart';
 import 'package:jejunongdi/core/services/ai_tips_service.dart';
-import 'package:jejunongdi/core/utils/logger.dart';
-import 'package:jejunongdi/redux/app_state.dart';
+
+// 메시지 데이터 모델
+class _ChatMessage {
+  final String? text;
+  final bool isUser;
+  final Widget? content;
+
+  _ChatMessage({
+    this.text,
+    required this.isUser,
+    this.content,
+  });
+}
 
 class AiAssistantScreen extends StatefulWidget {
   const AiAssistantScreen({super.key});
@@ -12,882 +23,477 @@ class AiAssistantScreen extends StatefulWidget {
   State<AiAssistantScreen> createState() => _AiAssistantScreenState();
 }
 
-class _AiAssistantScreenState extends State<AiAssistantScreen>
-    with TickerProviderStateMixin {
+class _AiAssistantScreenState extends State<AiAssistantScreen> {
+  final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final AiTipsService _aiTipsService = AiTipsService.instance;
-  
-  TodayFarmLifeModel? _todayFarmLife;
-  List<AiTipModel> _notifications = [];
-  List<AiTipModel> _dailyTips = [];
-  List<TipTypeModel> _tipTypes = [];
-  List<PestAlertModel> _pestAlerts = [];
-  WeatherBasedTipModel? _weatherTip;
-  CropGuideModel? _cropGuide;
-  
-  bool _isLoading = true;
-  late TabController _tabController;
+
+  final List<_ChatMessage> _messages = [];
+  bool _isProcessing = false;
+
+  // 추천 질문 목록 및 연결될 함수
+  late final List<Map<String, dynamic>> _suggestionChips;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
-    _loadInitialData();
+    _suggestionChips = [
+      {'label': '오늘의 농살', 'action': _fetchTodayFarmLife, 'isPrimary': true},
+      {'label': '날씨 기반 조언', 'action': _showTemporaryWeatherWarning, 'isPrimary': true, 'isDark': true},
+      {'label': '작물 가격', 'action': _showPriceAndRecommendation, 'isPrimary': false},
+      {'label': '작물 생육 가이드', 'action': _fetchCropGuide, 'isPrimary': false},
+      {'label': '병해충 조기 경보', 'action': _fetchPestAlerts, 'isPrimary': false},
+    ];
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  // 사용자 메시지 전송 및 AI 응답 처리 (일반 텍스트)
+  void _sendMessage(String text) {
+    if (text.trim().isEmpty) return;
+    _addUserMessage(text);
+    // TODO: 일반 텍스트 질문에 대한 AI 응답 로직 구현 필요
+    _addBotMessage(text: '"$text"에 대한 답변을 준비 중입니다.');
+    _textController.clear();
   }
 
-  Future<void> _loadInitialData() async {
-    setState(() => _isLoading = true);
-    
-    try {
-      // 병렬로 데이터 로드 (사용자 정보는 각 메소드에서 자동으로 가져옴)
-      await Future.wait([
-        _loadTodayFarmLife(),
-        _loadNotifications(),
-        _loadDailyTips(),
-        _loadTipTypes(),
-        _loadPestAlerts(),
-        _loadWeatherTip(),
-        _loadCropGuide(),
-      ]);
-    } catch (e) {
-      Logger.error('AI 도우미 초기 데이터 로드 실패', error: e);
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+  // 추천 질문 버튼 처리
+  Future<void> _handleChipAction(String label, Function action) async {
+    _addUserMessage(label);
+    if (action == _showComingSoonMessage || action == _showTemporaryWeatherWarning || action == _showPriceAndRecommendation) {
+      action();
+    } else {
+      _addBotMessage(content: _buildLoadingIndicator());
+      await action();
     }
+    _scrollToBottom();
   }
 
-  Future<void> _loadTodayFarmLife() async {
+  // 임시 폭염 경보 메시지 표시
+  void _showTemporaryWeatherWarning() {
+    const String warningText = '🔥1일부터 5일간 연속 폭염 예상!\n'
+        '최고기온 35°C 이상이 5일간 지속됩니다.\n'
+        '* 🌡️ 차광막 및 그늘막 설치 점검\n'
+        '* 💧 자동 급수 시설 정상 작동 확인\n'
+        '* ⏰ 작업 시간을 오전 7시 이전, 오후 6시 이후로 조정\n'
+        '* 🧴 작업자 수분 보충용품 준비\n'
+        '* 🏠 실내 작업 위주로 계획 변경';
+    _addBotMessage(text: warningText);
+  }
+
+  // 임시 가격 및 추천 정보 메시지 표시
+  void _showPriceAndRecommendation() {
+    const String priceInfo = '🍊감귤 가격정보\n'
+        '현재가: 28,000원/10kg (도매)\n'
+        '전년 대비: ↗️ +15.3% 상승';
+    _addBotMessage(text: priceInfo);
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      const String recommendation = '❗️작물 가격 기반 다음 작물을 추천드려요!\n'
+          '추천 작물: 🥕당근\n'
+          '작년 대비 29.7% 가격 상승!\n'
+          '지금 파종하면 높은 수익 기대됩니다.';
+      _addBotMessage(text: recommendation);
+    });
+  }
+
+  // 기능 준비 중 메시지 표시
+  void _showComingSoonMessage() {
+    _addBotMessage(text: '해당 기능은 현재 준비 중입니다. 조금만 기다려주세요!');
+  }
+
+  // 각 기능별 데이터 로드 및 UI 업데이트 함수
+  Future<void> _fetchTodayFarmLife() async {
     final result = await _aiTipsService.getTodayFarmLife();
-    if (result.isSuccess && mounted) {
-      setState(() => _todayFarmLife = result.data);
+    _removeLoadingMessage();
+    if (result.isSuccess && result.data != null) {
+      _addBotMessage(content: _buildTodayFarmLifeCard(result.data!));
+    } else {
+      _addBotMessage(text: '오늘의 농살 정보를 불러오는 데 실패했습니다.');
     }
   }
 
-  Future<void> _loadNotifications() async {
-    final result = await _aiTipsService.getNotifications();
-    if (result.isSuccess && mounted) {
-      setState(() => _notifications = result.data!);
-    }
-  }
-
-  Future<void> _loadDailyTips() async {
+  Future<void> _fetchDailyTips() async {
     final result = await _aiTipsService.getDailyTips();
-    if (result.isSuccess && mounted) {
-      setState(() => _dailyTips = result.data!);
+    _removeLoadingMessage();
+    if (result.isSuccess && result.data!.isNotEmpty) {
+      _addBotMessage(content: _buildTipsCard('맞춤 농업 팁', result.data!));
+    } else {
+      _addBotMessage(text: '맞춤 농업 팁을 불러오는 데 실패했습니다.');
     }
   }
 
-  Future<void> _loadTipTypes() async {
-    final result = await _aiTipsService.getTipTypes();
-    if (result.isSuccess && mounted) {
-      setState(() => _tipTypes = result.data!);
+  Future<void> _fetchNotifications() async {
+    final result = await _aiTipsService.getNotifications();
+    _removeLoadingMessage();
+    if (result.isSuccess && result.data!.isNotEmpty) {
+      _addBotMessage(content: _buildTipsCard('새로운 알림', result.data!));
+    } else {
+      _addBotMessage(text: '새로운 알림이 없습니다.');
     }
   }
 
-  Future<void> _loadPestAlerts() async {
-    final result = await _aiTipsService.getPestAlert(region: '제주도');
-    if (result.isSuccess && mounted) {
-      setState(() => _pestAlerts = result.data!);
-    }
-  }
-
-  Future<void> _loadWeatherTip() async {
+  Future<void> _fetchWeatherTip() async {
     final result = await _aiTipsService.getWeatherBasedTips();
-    if (result.isSuccess && mounted) {
-      setState(() => _weatherTip = result.data);
+    _removeLoadingMessage();
+    if (result.isSuccess && result.data != null) {
+      _addBotMessage(content: _buildWeatherTipCard(result.data!));
+    } else {
+      _addBotMessage(text: '날씨 기반 조언을 불러오는 데 실패했습니다.');
     }
   }
 
-  Future<void> _loadCropGuide() async {
+  Future<void> _fetchPestAlerts() async {
+    final result = await _aiTipsService.getPestAlert(region: '제주도');
+    _removeLoadingMessage();
+    if (result.isSuccess && result.data!.isNotEmpty) {
+      _addBotMessage(content: _buildPestAlertsCard(result.data!));
+    } else {
+      _addBotMessage(text: '현재 병해충 경보가 없습니다.');
+    }
+  }
+
+  Future<void> _fetchCropGuide() async {
     final result = await _aiTipsService.getCropGuide('감귤');
-    if (result.isSuccess && mounted) {
-      setState(() => _cropGuide = result.data);
+    _removeLoadingMessage();
+    if (result.isSuccess && result.data != null) {
+      _addBotMessage(content: _buildCropGuideCard(result.data!));
+    } else {
+      _addBotMessage(text: '작물 가이드를 불러오는 데 실패했습니다.');
     }
   }
 
   Future<void> _generateNewTip() async {
     final result = await _aiTipsService.generateDailyTip();
+    _removeLoadingMessage();
     if (result.isSuccess) {
-      _showSuccessSnackBar('새로운 맞춤 팁이 생성되었습니다!');
-      _loadDailyTips();
+      _addBotMessage(text: '새로운 맞춤 팁이 생성되었습니다! \'맞춤 농업 팁\' 버튼을 눌러 확인해보세요.');
     } else {
-      _showErrorSnackBar('팁 생성에 실패했습니다.');
+      _addBotMessage(text: '팁 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   }
 
-  Future<void> _markAsRead(AiTipModel tip) async {
-    final result = await _aiTipsService.markTipAsRead(tip.id);
-    if (result.isSuccess) {
-      setState(() {
-        final index = _notifications.indexWhere((t) => t.id == tip.id);
-        if (index != -1) {
-          _notifications[index] = tip.copyWith(isRead: true);
-        }
-      });
-    }
+  // 메시지 리스트 관리 헬퍼 함수
+  void _addUserMessage(String text) {
+    setState(() {
+      _messages.add(_ChatMessage(text: text, isUser: true));
+    });
+    _scrollToBottom();
   }
 
-  void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  void _addBotMessage({String? text, Widget? content}) {
+    setState(() {
+      _messages.add(_ChatMessage(text: text, content: content, isUser: false));
+    });
+    _scrollToBottom();
   }
 
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  void _removeLoadingMessage() {
+    setState(() {
+      _messages.removeWhere((m) => m.content is Center);
+    });
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Row(
-          children: [
-            Text('🤖 AI 농업 도우미'),
-          ],
-        ),
-        backgroundColor: const Color(0xFFF2711C),
-        foregroundColor: Colors.white,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: '오늘의 농업'),
-            Tab(text: '알림'),
-            Tab(text: '맞춤 팁'),
-            Tab(text: '날씨 알림'),
-            Tab(text: '병해충 경보'),
-            Tab(text: '작물 가이드'),
-          ],
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.refresh, color: Colors.black),
+          onPressed: () => setState(() => _messages.clear()),
         ),
         actions: [
           IconButton(
-            onPressed: _generateNewTip,
-            icon: const Icon(Icons.auto_awesome),
-            tooltip: '새 팁 생성',
-          ),
-          IconButton(
-            onPressed: _loadInitialData,
-            icon: const Icon(Icons.refresh),
-            tooltip: '새로고침',
+            icon: const Icon(Icons.close, color: Colors.black),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFF2711C)))
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildTodayFarmLifeTab(),
-                _buildNotificationsTab(),
-                _buildDailyTipsTab(),
-                _buildWeatherTipTab(),
-                _buildPestAlertsTab(),
-                _buildCropGuideTab(),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildTodayFarmLifeTab() {
-    if (_todayFarmLife == null) {
-      return const Center(child: Text('오늘의 농업 정보를 불러올 수 없습니다.'));
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadTodayFarmLife,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSummaryCard(),
-            const SizedBox(height: 16),
-            _buildWeatherAlertCard(),
-            const SizedBox(height: 16),
-            _buildCropTipCard(),
-            const SizedBox(height: 16),
-            _buildUrgentTasksCard(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.summarize, color: Color(0xFFF2711C)),
-                SizedBox(width: 8),
-                Text('오늘의 요약', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _todayFarmLife!.summary,
-              style: const TextStyle(fontSize: 16, height: 1.5),
-            ),
-            if (_todayFarmLife!.unreadNotifications > 0) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.red[100],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '읽지 않은 알림 ${_todayFarmLife!.unreadNotifications}개',
-                  style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeatherAlertCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.wb_sunny, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('날씨 알림', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _todayFarmLife!.weatherAlert,
-              style: const TextStyle(fontSize: 16, height: 1.5),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCropTipCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.eco, color: Colors.green),
-                SizedBox(width: 8),
-                Text('작물 관리 팁', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _todayFarmLife!.cropTip,
-              style: const TextStyle(fontSize: 16, height: 1.5),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUrgentTasksCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.priority_high, color: Colors.red),
-                SizedBox(width: 8),
-                Text('긴급 작업', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (_todayFarmLife!.urgentTasks.isEmpty)
-              const Text('오늘은 긴급한 작업이 없습니다.', style: TextStyle(fontSize: 16))
-            else
-              ...(_todayFarmLife!.urgentTasks.map((task) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.task_alt, size: 20, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(task, style: const TextStyle(fontSize: 16))),
-                      ],
-                    ),
-                  ))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationsTab() {
-    return RefreshIndicator(
-      onRefresh: _loadNotifications,
-      child: _notifications.isEmpty
-          ? const Center(child: Text('알림이 없습니다.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _notifications.length,
-              itemBuilder: (context, index) {
-                final notification = _notifications[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: notification.isRead ? Colors.grey : const Color(0xFFF2711C),
-                      child: Icon(
-                        _getIconForTipType(notification.tipType),
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      notification.title,
-                      style: TextStyle(
-                        fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          notification.content,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _formatDateTime(notification.createdAt),
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                    trailing: notification.isRead
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : const Icon(Icons.circle, color: Colors.grey),
-                    onTap: () => _showTipDetail(notification),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-
-  Widget _buildDailyTipsTab() {
-    return RefreshIndicator(
-      onRefresh: _loadDailyTips,
-      child: _dailyTips.isEmpty
-          ? const Center(child: Text('오늘의 맞춤 팁이 없습니다.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _dailyTips.length,
-              itemBuilder: (context, index) {
-                final tip = _dailyTips[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(_getIconForTipType(tip.tipType), color: const Color(0xFFF2711C)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                tip.title,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            if (tip.cropType != null)
-                              Chip(
-                                label: Text(tip.cropType!),
-                                backgroundColor: Colors.green[100],
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          tip.content,
-                          style: const TextStyle(fontSize: 14, height: 1.5),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _formatDateTime(tip.createdAt),
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-
-  Widget _buildWeatherTipTab() {
-    if (_weatherTip == null) {
-      return const Center(child: Text('날씨 기반 알림을 불러올 수 없습니다.'));
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadWeatherTip,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.wb_cloudy, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Text(
-                      _weatherTip!.farmName,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildWeatherInfoRow('날씨 상태', _weatherTip!.weatherCondition),
-                _buildWeatherInfoRow('온도', '${_weatherTip!.temperature.toStringAsFixed(1)}°C'),
-                _buildWeatherInfoRow('습도', '${_weatherTip!.humidity}%'),
-                const SizedBox(height: 16),
-                const Text('권장사항', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(_weatherTip!.recommendation, style: const TextStyle(fontSize: 14, height: 1.5)),
-                if (_weatherTip!.warning.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.warning, color: Colors.orange),
-                            SizedBox(width: 8),
-                            Text('주의사항', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(_weatherTip!.warning),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeatherInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Column(
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPestAlertsTab() {
-    return RefreshIndicator(
-      onRefresh: _loadPestAlerts,
-      child: _pestAlerts.isEmpty
-          ? const Center(child: Text('현재 병해충 경보가 없습니다.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _pestAlerts.length,
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              itemCount: _messages.length + 1,
               itemBuilder: (context, index) {
-                final alert = _pestAlerts[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.bug_report,
-                              color: _getSeverityColor(alert.severity),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                alert.pestName,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _getSeverityColor(alert.severity).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                alert.severity,
-                                style: TextStyle(
-                                  color: _getSeverityColor(alert.severity),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '지역: ${alert.region}',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(alert.description),
-                        if (alert.preventionMethods.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          const Text('예방법:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ...alert.preventionMethods.map((method) => Padding(
-                                padding: const EdgeInsets.only(left: 16, top: 4),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('• '),
-                                    Expanded(child: Text(method)),
-                                  ],
-                                ),
-                              )),
-                        ],
-                        const SizedBox(height: 8),
-                        Text(
-                          '발령일: ${_formatDateTime(alert.alertDate)}',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                if (index == 0) {
+                  return _buildWelcomeMessage();
+                }
+                final message = _messages[index - 1];
+                return _buildMessageItem(message);
               },
             ),
-    );
-  }
-
-  Widget _buildCropGuideTab() {
-    if (_cropGuide == null) {
-      return const Center(child: Text('작물 가이드를 불러올 수 없습니다.'));
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadCropGuide,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.agriculture, color: Colors.green),
-                        const SizedBox(width: 8),
-                        Text(
-                          _cropGuide!.cropType,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildGuideRow('현재 단계', _cropGuide!.currentStage),
-                    const SizedBox(height: 12),
-                    const Text('단계 설명', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text(_cropGuide!.stageDescription, style: const TextStyle(height: 1.5)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.task_alt, color: Color(0xFFF2711C)),
-                        SizedBox(width: 8),
-                        Text('해야 할 일', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ..._cropGuide!.tasks.map((task) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• ', style: TextStyle(color: Color(0xFFF2711C), fontSize: 16)),
-                              Expanded(child: Text(task)),
-                            ],
-                          ),
-                        )),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange),
-                        SizedBox(width: 8),
-                        Text('주의사항', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ..._cropGuide!.cautions.map((caution) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('⚠️ ', style: TextStyle(fontSize: 16)),
-                              Expanded(child: Text(caution)),
-                            ],
-                          ),
-                        )),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.schedule, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text('다음 단계', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildGuideRow('다음 단계', _cropGuide!.nextStage),
-                    _buildGuideRow(
-                      '예상 시기',
-                      _formatDateTime(_cropGuide!.estimatedNextStageDate),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGuideRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
-            ),
           ),
-          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
+          _buildChatInputField(),
         ],
       ),
     );
   }
 
-  void _showTipDetail(AiTipModel tip) {
-    if (!tip.isRead) {
-      _markAsRead(tip);
-    }
+  // --- UI 빌더 함수들 ---
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+  Widget _buildWelcomeMessage() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: Colors.grey[200],
+              child: ClipOval(
+                child: Image.asset(
+                  'lib/assets/images/ai_assistant_image.png',
+                  fit: BoxFit.contain,
+                  width: 48,
+                  height: 48,
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Icon(_getIconForTipType(tip.tipType), color: const Color(0xFFF2711C)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      tip.title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  if (tip.cropType != null)
-                    Chip(
-                      label: Text(tip.cropType!),
-                      backgroundColor: Colors.green[100],
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  child: Text(
-                    tip.content,
-                    style: const TextStyle(fontSize: 16, height: 1.6),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _formatDateTime(tip.createdAt),
-                    style: const TextStyle(color: Colors.grey),
+                    'AI 농업 도우미',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
                   ),
-                  if (tip.isRead)
-                    const Row(
-                      children: [
-                        Icon(Icons.check, size: 16, color: Colors.green),
-                        SizedBox(width: 4),
-                        Text('읽음', style: TextStyle(color: Colors.green)),
-                      ],
-                    ),
+                  SizedBox(height: 8),
+                  Text(
+                    '궁금한 점을 물어보거나, 아래 버튼을 눌러 주요 기능을 사용해보세요.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+                  ),
                 ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: _suggestionChips.map((chip) {
+            return ActionChip(
+              label: Text(
+                chip['label'],
+                style: TextStyle(
+                  color: chip['isDark'] == true ? Colors.white : (chip['isPrimary'] ? Color(0xFFF2711C) : Colors.black87),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              onPressed: () => _handleChipAction(chip['label'], chip['action'] as Function),
+              backgroundColor: chip['isDark'] == true ? Colors.black : (chip['isPrimary'] ? Color(0xFFF2711C).withOpacity(0.1) : Colors.grey[200]),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: chip['isPrimary'] ? Color(0xFFF2711C).withOpacity(0.2) : Colors.grey[300]!,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _buildMessageItem(_ChatMessage message) {
+    final align = message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final color = message.isUser ? Color(0xFFF2711C) : Colors.grey[200];
+    final textColor = message.isUser ? Colors.white : Colors.black87;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Column(
+        crossAxisAlignment: align,
+        children: [
+          if (!message.isUser) ...[
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.grey[200],
+                  child: ClipOval(
+                    child: Image.asset(
+                      'lib/assets/images/ai_assistant_image.png',
+                      fit: BoxFit.contain,
+                      width: 32,
+                      height: 32,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text('AI 농업 도우미', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
+          Row(
+            mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: [
+              Container(
+                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: message.content ?? Text(
+                  message.text ?? '',
+                  style: TextStyle(color: textColor, fontSize: 16, height: 1.4),
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  IconData _getIconForTipType(String tipType) {
-    switch (tipType.toLowerCase()) {
-      case 'weather':
-        return Icons.wb_sunny;
-      case 'pest':
-        return Icons.bug_report;
-      case 'crop':
-        return Icons.eco;
-      case 'general':
-        return Icons.lightbulb;
-      case 'urgent':
-        return Icons.priority_high;
-      default:
-        return Icons.info;
-    }
+  Widget _buildChatInputField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, -1))],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(24.0)),
+                child: TextField(
+                  controller: _textController,
+                  decoration: const InputDecoration(hintText: '궁금한 사항을 입력해 주세요', border: InputBorder.none, hintStyle: TextStyle(color: Colors.grey)),
+                  onSubmitted: _sendMessage,
+                  onChanged: (text) => setState(() {}),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            CircleAvatar(
+              backgroundColor: _textController.text.trim().isNotEmpty ? const Color(0xFFF2711C) : Colors.grey[300],
+              radius: 24,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_upward, color: Colors.white),
+                onPressed: _textController.text.trim().isNotEmpty ? () => _sendMessage(_textController.text) : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildLoadingIndicator() {
+    return const Center(
+      child: SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFFF2711C)),
+      ),
+    );
   }
 
-  Color _getSeverityColor(String severity) {
-    switch (severity.toLowerCase()) {
-      case 'high':
-      case '높음':
-        return Colors.red;
-      case 'medium':
-      case '보통':
-        return Colors.orange;
-      case 'low':
-      case '낮음':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
+  // --- 데이터 포맷팅 카드 위젯들 ---
+
+  Widget _buildTodayFarmLifeCard(TodayFarmLifeModel data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSection(title: '오늘의 농살', content: data.summary),
+        _buildSection(title: '날씨 알림', content: data.weatherAlert),
+        _buildSection(title: '작물 관리 팁', content: data.cropTip),
+        _buildSection(title: '긴급 작업', content: data.urgentTasks.join('\n')),
+      ],
+    );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.year}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  Widget _buildTipsCard(String title, List<AiTipModel> tips) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ...tips.map((tip) => Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Text('• ${tip.title}'),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildWeatherTipCard(WeatherBasedTipModel data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(data.farmName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        _buildSection(title: '날씨', content: data.weatherCondition),
+        _buildSection(title: '권장사항', content: data.recommendation),
+        if (data.warning.isNotEmpty) _buildSection(title: '주의사항', content: data.warning, isWarning: true),
+      ],
+    );
+  }
+
+  Widget _buildPestAlertsCard(List<PestAlertModel> alerts) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('병해충 경보', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ...alerts.map((alert) => Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Text('• [${alert.severity}] ${alert.pestName}'),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildCropGuideCard(CropGuideModel data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('${data.cropType} 가이드', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        _buildSection(title: '현재 단계', content: data.currentStage),
+        _buildSection(title: '해야 할 일', content: data.tasks.join('\n')),
+        if (data.cautions.isNotEmpty) _buildSection(title: '주의사항', content: data.cautions.join('\n'), isWarning: true),
+      ],
+    );
+  }
+
+  Widget _buildSection({required String title, required String content, bool isWarning = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: isWarning ? Colors.red : Colors.black)),
+          const SizedBox(height: 4),
+          Text(content, style: const TextStyle(height: 1.5)),
+        ],
+      ),
+    );
   }
 }
