@@ -12,7 +12,10 @@ import 'package:jejunongdi/screens/login_screen.dart';
 import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
 import 'package:jejunongdi/screens/job_posting_create_screen.dart';
 import 'package:jejunongdi/screens/ai_assistant_screen.dart';
-import 'dart:math' as math;
+import 'package:jejunongdi/screens/idle_farmland_list_screen.dart';
+import 'package:jejunongdi/core/models/idle_farmland_models.dart';
+import 'package:jejunongdi/core/services/idle_farmland_service.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,19 +29,24 @@ class _HomeScreenState extends State<HomeScreen> {
   NaverMapController? _controller;
   final Set<NMarker> _markers = {};
   List<JobPostingResponse> _jobPostings = [];
+  List<JobPostingResponse> _allJobPostings = [];
+  List<IdleFarmlandResponse> _idleFarmlands = [];
   final JobPostingService _jobPostingService = JobPostingService.instance;
+  final IdleFarmlandService _idleFarmlandService = IdleFarmlandService.instance;
   Timer? _debounceTimer;
   bool _isLoading = false;
+  
+  // 탭 상태
+  int _selectedTabIndex = 0; // 0: 일자리, 1: 유휴농지
 
   // DraggableScrollableSheet 관련 상태
   double _sheetPosition = 0.3;
   final DraggableScrollableController _sheetController = DraggableScrollableController();
-  static const double _fixedSpacing = -20.0; // 고정 간격
+
 
   // 웹용 설정
   static const double _initialLat = 33.375;
   static const double _initialLng = 126.49;
-  static const int _initialZoom = 11;
 
   static const NLatLng _initialPosition = NLatLng(_initialLat, _initialLng);
 
@@ -46,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadJobPostingsForCurrentView();
+    _loadAllJobPostings();
+    _loadIdleFarmlandsForCurrentView();
 
     // DraggableScrollableController 리스너 추가
     _sheetController.addListener(() {
@@ -65,18 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // 기존 NaverMap 관련 메서드들
-  void _onWebMarkerClick(JobPostingResponse jobPosting) {
-    final isAuthenticated = StoreProvider.of<AppState>(context, listen: false)
-        .state
-        .userState
-        .isAuthenticated;
-
-    if (isAuthenticated) {
-      _showJobPostingDetails(jobPosting);
-    } else {
-      _showLoginRequiredDialog();
-    }
-  }
 
   void _onMapReady(NaverMapController controller) {
     _controller = controller;
@@ -93,6 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 800), () {
       _loadJobPostingsForCurrentView();
+      _loadAllJobPostings();
+      _loadIdleFarmlandsForCurrentView();
     });
   }
 
@@ -155,6 +155,50 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadAllJobPostings() async {
+    if (!mounted) return;
+
+    try {
+      final result = await _jobPostingService.getJobPostingsPaged(
+        page: 0,
+        size: 1000, // 큰 수로 설정하여 모든 일자리 가져오기
+      );
+
+      if (result.isSuccess && mounted) {
+        setState(() {
+          _allJobPostings = result.data!.content;
+        });
+      } else if (result.isFailure && mounted) {
+        final errorMsg = result.error?.message ?? "알 수 없는 오류";
+        Logger.error('전체 일자리 데이터 로드 실패: $errorMsg');
+      }
+    } catch (e) {
+      Logger.error('전체 일자리 데이터 로드 실패', error: e);
+    }
+  }
+
+  Future<void> _loadIdleFarmlandsForCurrentView() async {
+    if (!mounted) return;
+
+    try {
+      final result = await _idleFarmlandService.getIdleFarmlands(
+        page: 0,
+        size: 20,
+      );
+
+      if (result.isSuccess && mounted) {
+        setState(() {
+          _idleFarmlands = result.data!.content;
+        });
+      } else if (result.isFailure && mounted) {
+        final errorMsg = result.error?.message ?? "알 수 없는 오류";
+        Logger.error('유휴농지 데이터 로드 실패: $errorMsg');
+      }
+    } catch (e) {
+      Logger.error('유휴농지 데이터 로드 실패', error: e);
     }
   }
 
@@ -259,6 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (kIsWeb) {
       // 웹에서는 데이터 새로고침만 수행
       _loadJobPostingsForCurrentView();
+      _loadAllJobPostings();
+      _loadIdleFarmlandsForCurrentView();
     } else {
       if (_controller != null) {
         _controller!.updateCamera(
@@ -273,21 +319,65 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 가장 가까운 중단점으로 스냅하는 메서드
+  /// 드래그가 끝났을 때의 속도를 기반으로 가장 적절한 중단점으로 스냅합니다.
+  void _snapToClosestBreakpoint(DragEndDetails details) {
+    if (!_sheetController.isAttached) return;
+
+    final double dyVelocity = details.velocity.pixelsPerSecond.dy;
+    const double velocityThreshold = 500.0; // '플릭(flick)'으로 인식할 최소 수직 스크롤 속도
+
+    final currentSize = _sheetController.size;
+    const double minSize = 0.2;
+    const double maxSize = 0.7;
+
+    double targetBreakpoint;
+
+    // 위/아래로 빠르게 밀어내는(플릭) 제스처를 확인합니다.
+    if (dyVelocity < -velocityThreshold) {
+      // 위로 플릭: 상단 중단점(0.7)으로 이동
+      targetBreakpoint = maxSize;
+    } else if (dyVelocity > velocityThreshold) {
+      // 아래로 플릭: 하단 중단점(0.2)으로 이동
+      targetBreakpoint = minSize;
+    } else {
+      // 플릭이 아닌 경우: 드래그를 멈춘 위치에서 가장 가까운 중단점으로 이동
+      if ((currentSize - minSize).abs() < (currentSize - maxSize).abs()) {
+        targetBreakpoint = minSize;
+      } else {
+        targetBreakpoint = maxSize;
+      }
+    }
+
+    // 결정된 목표 중단점으로 애니메이션을 실행합니다.
+    _sheetController.animateTo(
+      targetBreakpoint,
+      duration: const Duration(milliseconds: 350), // 반응성을 위해 애니메이션 시간을 약간 줄임
+      curve: Curves.easeInOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final sheetHeight = screenHeight * _sheetPosition;
-    // 시트 위치에 따라 동적으로 간격 조정
+    // 시트 위치에 따라 동적으로 간격 조정 (overflow 방지)
     double dynamicSpacing;
-    if (_sheetPosition <= 0.15) {
-      // 최하단일 때는 충분한 간격 확보
-      dynamicSpacing = 0.0;
-    } else if (_sheetPosition > 0.7) {
+    if (_sheetPosition <= 0.08) {
+      // 최하단일 때는 충분한 간격 확보 (overflow 방지)
+      dynamicSpacing = 80.0; // 더 큰 간격으로 overflow 방지
+    } else if (_sheetPosition <= 0.15) {
+      // 하단 근처에서도 여유 간격 확보
+      dynamicSpacing = 70.0;
+    } else if (_sheetPosition >= 0.8) {
       // 최상단일 때는 더 가깝게
-      dynamicSpacing = -60.0;
+      dynamicSpacing = -50.0;
+    } else if (_sheetPosition >= 0.6) {
+      // 상단 근처일 때
+      dynamicSpacing = -30.0;
     } else {
       // 중간 위치에서는 기본 간격
-      dynamicSpacing = _fixedSpacing;
+      dynamicSpacing = 10.0;
     }
     final jobAlertBottom = sheetHeight + dynamicSpacing;
 
@@ -448,9 +538,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // 중앙: 일자리 알림 컨테이너 (Flexible로 변경하여 overflow 방지)
+                // 중앙: 일자리 알림 컨테이너 (내용에 맞게 크기 조정)
                 Flexible(
-                  flex: 1,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
@@ -495,15 +584,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            '현재 ${_jobPostings.length}개 일자리',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF2D2D2D),
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          _selectedTabIndex == 0 
+                              ? '현재 ${_jobPostings.length}개 일자리'
+                              : '현재 ${_idleFarmlands.length}개 유휴농지',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2D2D2D),
                           ),
                         ),
                       ],
@@ -516,12 +604,11 @@ class _HomeScreenState extends State<HomeScreen> {
           // DraggableScrollableSheet
           DraggableScrollableSheet(
             controller: _sheetController,
-            initialChildSize: 0.3,
-            minChildSize: 0.1,
-            maxChildSize: 0.8,
-            expand: true,
-            snap: true,
-            snapSizes: const [0.1, 0.3, 0.8],
+            initialChildSize: 0.25,
+            minChildSize: 0.25, // 중단점 아래로 내려가지 않도록 제한
+            maxChildSize: 0.7, // 상단 중단점까지만 확장
+            snap: true, // 스냅 효과 활성화
+            snapSizes: [0.25, 0.7], // 중단, 상단 2개 중단점만 설정
             builder: (BuildContext context, ScrollController scrollController) {
               return Container(
                 decoration: const BoxDecoration(
@@ -535,141 +622,196 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   ],
                 ),
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 드래그 핸들 영역 (드래그 가능)
+                    GestureDetector(
+                      onPanUpdate: (details) {
+                        // 수직 드래그만 허용
+                        if (details.delta.dy.abs() > details.delta.dx.abs()) {
+                          final currentSize = _sheetController.size;
+                          final screenHeight = MediaQuery.of(context).size.height;
+                          final deltaSize = -details.delta.dy / screenHeight * 1.5; // 민감도 증가
+                          final newSize = (currentSize + deltaSize).clamp(0.25, 0.7); // 중단점 범위로 제한
+                          
+                          // 즉시 반영 (애니메이션 없이)
+                          if (_sheetController.isAttached) {
+                            _sheetController.jumpTo(newSize);
+                          }
+                        }
+                      },
+                      onPanEnd: (details) {
+                        // 드래그 종료 시 가장 가까운 중단점으로 스냅
+                        _snapToClosestBreakpoint(details);
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: 32,
+                        color: Colors.transparent,
+                        child: Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[400],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
                       ),
-                      // 상단 버튼 영역 (50:50 배치)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                        child: Row(
-                          children: [
-                            // 일자리 찾기 버튼 (50%)
-                            Expanded(
-                              child: Container(
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFFF2711C),
-                                      Color(0xFFFF8C42),
-                                    ],
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFFF2711C).withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: _navigateToJobList,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.search, color: Colors.white, size: 16),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        '일자리 찾기',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                    ),
+                    // 탭 버튼 영역 (드래그 가능, 탭은 GestureDetector로 처리)
+                    GestureDetector(
+                      onPanUpdate: (details) {
+                        // 수직 드래그만 허용
+                        if (details.delta.dy.abs() > details.delta.dx.abs()) {
+                          final currentSize = _sheetController.size;
+                          final screenHeight = MediaQuery.of(context).size.height;
+                          final deltaSize = -details.delta.dy / screenHeight * 1.0; // 민감도 증가
+                          final newSize = (currentSize + deltaSize).clamp(0.2, 0.7);
+
+                          // 즉시 반영 (애니메이션 없이)
+                          if (_sheetController.isAttached) {
+                            _sheetController.jumpTo(newSize);
+                          }
+                        }
+                      },
+                      onPanEnd: (details) {
+                        // 드래그 종료 시 가장 가까운 중단점으로 스냅
+                        _snapToClosestBreakpoint(details);
+                      },
+                      onTap: () {
+                        // 탭 처리는 별도 GestureDetector로
+                      },
+                      child: GestureDetector(
+                        onTapDown: (details) {
+                          // 탭 위치에 따라 탭 인덱스 결정
+                          final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+                          if (renderBox != null) {
+                            final localPosition = renderBox.globalToLocal(details.globalPosition);
+                            final containerWidth = renderBox.size.width - 32; // padding 제외
+                            final isLeftTab = localPosition.dx < (containerWidth / 2 + 16);
+                            
+                            setState(() {
+                              _selectedTabIndex = isLeftTab ? 0 : 1;
+                            });
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(width: 8),
-                            // 일손 구하기 버튼 (50%)
-                            Expanded(
-                              child: Container(
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white,
-                                      Colors.grey[50]!,
-                                    ],
-                                  ),
-                                  border: Border.all(
-                                    color: const Color(0xFFF2711C).withValues(alpha: 0.3),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.05),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _selectedTabIndex == 0 
+                                          ? const Color(0xFFF2711C)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: _showWorkerRecruit,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.people, color: Color(0xFFF2711C), size: 16),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        '일손 구하기',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFFF2711C),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.work_outline,
+                                          size: 16,
+                                          color: _selectedTabIndex == 0 
+                                              ? Colors.white
+                                              : Colors.grey[600],
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '일자리',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: _selectedTabIndex == 0 
+                                                ? Colors.white
+                                                : Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
+                                ),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _selectedTabIndex == 1 
+                                          ? const Color(0xFFF2711C)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.agriculture,
+                                          size: 16,
+                                          color: _selectedTabIndex == 1 
+                                              ? Colors.white
+                                              : Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '유휴농지',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: _selectedTabIndex == 1 
+                                                ? Colors.white
+                                                : Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 리스트 영역 (드래그 차단, 스크롤 가능)
+                    Expanded(
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          // 스크롤 알림을 차단하여 DraggableScrollableSheet가 반응하지 않도록 함
+                          return true;
+                        },
+                        child: Stack(
+                          children: [
+                            _selectedTabIndex == 0 
+                                ? _buildJobListWithController(scrollController)
+                                : _buildIdleFarmlandListWithController(scrollController),
+                            // 플로팅 액션 버튼
+                            Positioned(
+                              bottom: 16,
+                              right: 16,
+                              child: FloatingActionButton(
+                                onPressed: _selectedTabIndex == 0 ? _showWorkerRecruit : _navigateToIdleFarmlandCreate,
+                                backgroundColor: const Color(0xFFF2711C),
+                                foregroundColor: Colors.white,
+                                child: Icon(
+                                  _selectedTabIndex == 0 ? Icons.add : Icons.add_location,
+                                  size: 24,
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // 추가 콘텐츠 영역
-                      const Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // 필요시 추가 콘텐츠를 여기에 배치
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -785,7 +927,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  '일자리: ${_jobPostings.length}개',
+                  _selectedTabIndex == 0 
+                      ? '일자리: ${_jobPostings.length}개'
+                      : '유휴농지: ${_idleFarmlands.length}개',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -837,6 +981,490 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const AiAssistantScreen(),
+      ),
+    );
+  }
+
+  void _navigateToIdleFarmlandList() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const IdleFarmlandListScreen(),
+      ),
+    );
+  }
+  
+  void _navigateToIdleFarmlandCreate() {
+    // 유휴농지 등록 화면으로 이동 (필요시 구현)
+  }
+
+  Widget _buildJobListWithController(ScrollController scrollController) {
+    if (_isLoading && _allJobPostings.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFF2711C),
+        ),
+      );
+    }
+
+    if (_allJobPostings.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.work_off,
+              size: 48,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              '등록된 일자리가 없습니다',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: scrollController,
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _allJobPostings.length + 1,
+      itemBuilder: (context, index) {
+        if (index >= _allJobPostings.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '리스트를 전부 확인 하셨습니다.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ),
+          );
+        }
+        final job = _allJobPostings[index];
+        return _buildJobCard(job);
+      },
+    );
+  }
+
+  Widget _buildIdleFarmlandListWithController(ScrollController scrollController) {
+    if (_idleFarmlands.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.agriculture,
+              size: 48,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              '등록된 유휴농지가 없습니다',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: scrollController,
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _idleFarmlands.length + 1,
+      itemBuilder: (context, index) {
+        if (index >= _idleFarmlands.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '리스트를 전부 확인 하셨습니다.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ),
+          );
+        }
+        final farmland = _idleFarmlands[index];
+        return _buildFarmlandCard(farmland);
+      },
+    );
+  }
+
+  Widget _buildJobList() {
+    if (_isLoading && _allJobPostings.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFF2711C),
+        ),
+      );
+    }
+
+    if (_allJobPostings.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.work_off,
+              size: 48,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              '등록된 일자리가 없습니다',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _allJobPostings.length + 1,
+      itemBuilder: (context, index) {
+        if (index >= _allJobPostings.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '리스트 끝',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ),
+          );
+        }
+        final job = _allJobPostings[index];
+        return _buildJobCard(job);
+      },
+    );
+  }
+
+  Widget _buildIdleFarmlandList() {
+    if (_idleFarmlands.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.agriculture,
+              size: 48,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              '등록된 유휴농지가 없습니다',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _idleFarmlands.length + 1,
+      itemBuilder: (context, index) {
+        if (index >= _idleFarmlands.length) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '리스트 끝',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ),
+          );
+        }
+        final farmland = _idleFarmlands[index];
+        return _buildFarmlandCard(farmland);
+      },
+    );
+  }
+
+  Widget _buildJobCard(JobPostingResponse job) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: InkWell(
+        onTap: () => _showJobPostingDetails(job),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                job.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      job.address,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${NumberFormat('#,###').format(job.wages)}원/${job.wageTypeName}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFF2711C),
+                    ),
+                  ),
+                  Text(
+                    '모집 ${job.recruitmentCount}명',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFarmlandCard(IdleFarmlandResponse farmland) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: InkWell(
+        onTap: () {
+          // 유휴농지 상세 보기 (필요시 구현)
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                farmland.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      farmland.address,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${farmland.areaSize}평',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFF2711C),
+                    ),
+                  ),
+                  Text(
+                    '월 ${NumberFormat('#,###').format(farmland.monthlyRent ?? 0)}원',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJobListWithoutController() {
+    if (_isLoading && _allJobPostings.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFF2711C),
+        ),
+      );
+    }
+
+    if (_allJobPostings.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.work_off,
+              size: 48,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              '등록된 일자리가 없습니다',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          ...List.generate(_allJobPostings.length, (index) {
+            final job = _allJobPostings[index];
+            return _buildJobCard(job);
+          }),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '리스트를 전부 확인 하셨습니다.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIdleFarmlandListWithoutController() {
+    if (_idleFarmlands.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.agriculture,
+              size: 48,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              '등록된 유휴농지가 없습니다',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          ...List.generate(_idleFarmlands.length, (index) {
+            final farmland = _idleFarmlands[index];
+            return _buildFarmlandCard(farmland);
+          }),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '리스트 끝',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
