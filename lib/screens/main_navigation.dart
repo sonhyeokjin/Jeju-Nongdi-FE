@@ -29,8 +29,8 @@ class _MainNavigationState extends State<MainNavigation> {
   Future<void> _handleTabChange(int index) async {
     final userState = StoreProvider.of<AppState>(context, listen: false).state.userState;
 
-    // 'MY농디' 탭(인덱스 4)을 눌렀고, 로그인이 되어있지 않은 경우
-    if (index == 4 && !userState.isAuthenticated) {
+    // 'MY농디' 탭(인덱스 3)을 눌렀고, 로그인이 되어있지 않은 경우
+    if (index == 3 && !userState.isAuthenticated) {
       // 로그인 화면으로 이동하고, 화면이 닫힐 때까지 기다립니다.
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -58,13 +58,13 @@ class _MainNavigationState extends State<MainNavigation> {
         // 1. 로그인 성공 시: 'MY농디' 탭으로 이동
         if (previousState?.isAuthenticated == false && newState.isAuthenticated) {
           setState(() {
-            _currentIndex = 4;
+            _currentIndex = 3;
           });
         }
         // 2. 로그아웃 성공 시: '홈' 탭으로 이동
         else if (previousState?.isAuthenticated == true && newState.isAuthenticated == false) {
           // 사용자가 로그인이 필요한 페이지에 있었다면 홈으로 보냅니다.
-          if (_currentIndex == 4) {
+          if (_currentIndex == 3) {
             setState(() {
               _currentIndex = 0;
             });
@@ -79,8 +79,6 @@ class _MainNavigationState extends State<MainNavigation> {
               const HomeScreen(),
               const MentoringListScreen(),
               const ChatListScreen(),
-              // 농지 보기 탭: 새로 추가된 유휴 농지 리스트 화면
-              const IdleFarmlandListScreen(),
               // MY농디 탭: 로그인 상태에 따라 다른 화면 표시
               userState.isAuthenticated
                   ? const MyPageScreen()
@@ -105,10 +103,10 @@ class _MainNavigationState extends State<MainNavigation> {
               child: GNav(
                 // Key를 위젯에 할당합니다.
                 key: _bottomNavKey,
-                gap: 8,
+                gap: 3,
                 activeColor: Colors.white,
                 iconSize: 24,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                 duration: const Duration(milliseconds: 400),
                 tabBackgroundColor: const Color(0xFFF2711C),
                 color: Colors.grey[600],
@@ -131,10 +129,6 @@ class _MainNavigationState extends State<MainNavigation> {
                   GButton(
                     icon: FontAwesomeIcons.solidCommentDots,
                     text: '궁시렁',
-                  ),
-                  GButton(
-                    icon: FontAwesomeIcons.tractor,
-                    text: ' 유휴농지',
                   ),
                   GButton(
                     icon: userState.isAuthenticated

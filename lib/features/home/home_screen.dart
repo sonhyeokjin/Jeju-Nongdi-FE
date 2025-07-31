@@ -13,9 +13,11 @@ import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
 import 'package:jejunongdi/screens/job_posting_create_screen.dart';
 import 'package:jejunongdi/screens/ai_assistant_screen.dart';
 import 'package:jejunongdi/screens/idle_farmland_list_screen.dart';
+import 'package:jejunongdi/screens/idle_farmland_create_screen.dart';
 import 'package:jejunongdi/core/models/idle_farmland_models.dart';
 import 'package:jejunongdi/core/services/idle_farmland_service.dart';
 import 'package:intl/intl.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,6 +44,13 @@ class _HomeScreenState extends State<HomeScreen> {
   // DraggableScrollableSheet 관련 상태
   double _sheetPosition = 0.3;
   final DraggableScrollableController _sheetController = DraggableScrollableController();
+  
+  // 말풍선 텍스트 순환을 위한 상태
+  Timer? _textSwitchTimer;
+  int _currentTextIndex = 0;
+  final List<String> _speechBubbleTexts = [
+    '🔥 1일부터 5일간 연속 폭염 예상!',
+  ];
 
 
   // 웹용 설정
@@ -65,11 +74,25 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     });
+
+    // 텍스트 순환 타이머 시작
+    _startTextSwitchTimer();
+  }
+
+  void _startTextSwitchTimer() {
+    _textSwitchTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentTextIndex = (_currentTextIndex + 1) % _speechBubbleTexts.length;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _textSwitchTimer?.cancel();
     _sheetController.dispose();
     super.dispose();
   }
@@ -396,53 +419,103 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: _navigateToAiAssistant,
+                  GestureDetector(
+                    onTap: _navigateToAiAssistant,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFF2711C),
+                            Color(0xFFFF8C42),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(26),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF2711C).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                            spreadRadius: 1,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
                         child: Container(
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              )
-                            ],
+                            borderRadius: BorderRadius.circular(23),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Image.asset(
-                              'lib/assets/images/dol_hareubang_emti.png',
-                              height: 32,
-                              width: 32,
-                              fit: BoxFit.contain,
-                            ),
+                          child: Image.asset(
+                            'lib/assets/images/dol_hareubang_emti.png',
+                            height: 32,
+                            width: 32,
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      CustomPaint(
-                        painter: SpeechBubblePainter(),
-                        child: Container(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
-                          child: const Text(
-                            ' 클릭하면 AI 팁!',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox.shrink(), // 빈 공간으로 대체
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 800),
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: 0.8 + (0.2 * value),
+                          alignment: Alignment.centerLeft,
+                          child: Opacity(
+                            opacity: value,
+                            child: CustomPaint(
+                              painter: ModernSpeechBubblePainter(),
+                              child: Container(
+                                margin: const EdgeInsets.only(left: 12),
+                                padding: const EdgeInsets.fromLTRB(24, 14, 18, 14),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  transitionBuilder: (Widget child, Animation<double> animation) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: SlideTransition(
+                                        position: Tween<Offset>(
+                                          begin: const Offset(0.0, 0.5),
+                                          end: Offset.zero,
+                                        ).animate(animation),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  switchInCurve: Curves.easeOut,
+                                  switchOutCurve: Curves.easeIn,
+                                  child: Text(
+                                    _speechBubbleTexts[_currentTextIndex],
+                                    key: ValueKey<int>(_currentTextIndex),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF2D2D2D),
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -461,13 +534,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0.95),
-                        Colors.grey[50]!.withOpacity(0.95),
+                        Colors.white.withValues(alpha: 0.95),
+                        Colors.grey[50]!.withValues(alpha: 0.95),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: const Color(0xFFF2711C).withOpacity(0.2),
+                      color: const Color(0xFFF2711C).withValues(alpha: 0.2),
                       width: 1,
                     ),
                     boxShadow: [
@@ -545,13 +618,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.white.withOpacity(0.95),
-                          Colors.grey[50]!.withOpacity(0.95),
+                          Colors.white.withValues(alpha: 0.95),
+                          Colors.grey[50]!.withValues(alpha: 0.95),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: const Color(0xFFF2711C).withOpacity(0.2),
+                        color: const Color(0xFFF2711C).withValues(alpha: 0.2),
                         width: 1,
                       ),
                       boxShadow: [
@@ -703,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(24),
                             ),
                             child: Row(
                               children: [
@@ -714,7 +787,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: _selectedTabIndex == 0 
                                           ? const Color(0xFFF2711C)
                                           : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
@@ -748,7 +821,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: _selectedTabIndex == 1 
                                           ? const Color(0xFFF2711C)
                                           : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
@@ -797,13 +870,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             Positioned(
                               bottom: 16,
                               right: 16,
-                              child: FloatingActionButton(
+                              child: FloatingActionButton.extended(
                                 onPressed: _selectedTabIndex == 0 ? _showWorkerRecruit : _navigateToIdleFarmlandCreate,
                                 backgroundColor: const Color(0xFFF2711C),
                                 foregroundColor: Colors.white,
-                                child: Icon(
+                                icon: Icon(
                                   _selectedTabIndex == 0 ? Icons.add : Icons.add_location,
                                   size: 24,
+                                ),
+                                label: Text(
+                                  _selectedTabIndex == 0 ? '일자리 추가하기' : '농지 등록하기',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ),
@@ -994,7 +1071,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   void _navigateToIdleFarmlandCreate() {
-    // 유휴농지 등록 화면으로 이동 (필요시 구현)
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const IdleFarmlandCreateScreen()),
+    ).then((result) {
+      if (result == true) {
+        // 지도 및 데이터 새로고침
+        _loadJobPostingsForCurrentView();
+        _loadIdleFarmlandsForCurrentView();
+      }
+    });
   }
 
   Widget _buildJobListWithController(ScrollController scrollController) {
@@ -1057,50 +1142,93 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildIdleFarmlandListWithController(ScrollController scrollController) {
     if (_idleFarmlands.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.agriculture,
-              size: 48,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              '등록된 유휴농지가 없습니다',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyIdleFarmlandView(scrollController);
     }
+    return _buildIdleFarmlandContent(scrollController);
+  }
 
-    return ListView.builder(
-      controller: scrollController,
-      physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: _idleFarmlands.length + 1,
-      itemBuilder: (context, index) {
-        if (index >= _idleFarmlands.length) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                '리스트를 전부 확인 하셨습니다.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
-                ),
-              ),
+  Widget _buildEmptyIdleFarmlandView(ScrollController scrollController) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
             ),
-          );
-        }
-        final farmland = _idleFarmlands[index];
-        return _buildFarmlandCard(farmland);
+            child: Column(
+              children: [
+                _buildIdleFarmlandActionButtons(),
+                SizedBox(height: constraints.maxHeight > 200 ? 20 : 10),
+                SizedBox(
+                  height: constraints.maxHeight > 200 ? constraints.maxHeight - 120 : constraints.maxHeight * 0.6,
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.agriculture,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          '등록된 유휴농지가 없습니다',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildIdleFarmlandContent(ScrollController scrollController) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          physics: const ClampingScrollPhysics(),
+          child: Column(
+            children: [
+              _buildIdleFarmlandActionButtons(),
+              const SizedBox(height: 8),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: _idleFarmlands.length + 1,
+                itemBuilder: (context, index) {
+                  if (index >= _idleFarmlands.length) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          '리스트를 전부 확인 하셨습니다.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  final farmland = _idleFarmlands[index];
+                  return _buildFarmlandCard(farmland);
+                },
+              ),
+            ],
+          ),
+        );
       },
     );
   }
@@ -1210,74 +1338,218 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildJobCard(JobPostingResponse job) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 6),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+            spreadRadius: -1,
+          ),
+        ],
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
       ),
-      child: InkWell(
-        onTap: () => _showJobPostingDetails(job),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                job.title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 14,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      job.address,
-                      style: TextStyle(
-                        fontSize: 12,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showJobPostingDetails(job),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 상단: 상태 뱃지와 하트 아이콘
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        '모집중',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.favorite_border,
+                        size: 18,
                         color: Colors.grey[600],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // 제목
+                Text(
+                  job.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A1A),
+                    height: 1.3,
                   ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${NumberFormat('#,###').format(job.wages)}원/${job.wageTypeName}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFF2711C),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                // 위치
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: Colors.grey[500],
                     ),
-                  ),
-                  Text(
-                    '모집 ${job.recruitmentCount}명',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        job.address,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // 구분선
+                Container(
+                  height: 1,
+                  color: Colors.grey.withValues(alpha: 0.1),
+                ),
+                const SizedBox(height: 16),
+                // 하단: 급여와 모집인원
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '급여',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${NumberFormat('#,###').format(job.wages)}',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFF2711C),
+                                ),
+                              ),
+                              TextSpan(
+                                text: '원',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          job.wageTypeName,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2711C).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '모집인원',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '${job.recruitmentCount}',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFFF2711C),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '명',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1285,76 +1557,199 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFarmlandCard(IdleFarmlandResponse farmland) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 6),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+            spreadRadius: -1,
+          ),
+        ],
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
       ),
-      child: InkWell(
-        onTap: () {
-          // 유휴농지 상세 보기 (필요시 구현)
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                farmland.title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 14,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      farmland.address,
-                      style: TextStyle(
-                        fontSize: 12,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // 유휴농지 상세 보기 (필요시 구현)
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 상단: 상태 뱃지와 하트 아이콘
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2196F3),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        '임대가능',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.bookmark_border,
+                        size: 18,
                         color: Colors.grey[600],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // 제목
+                Text(
+                  farmland.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A1A),
+                    height: 1.3,
                   ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${farmland.areaSize}평',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFF2711C),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                // 위치
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: Colors.grey[500],
                     ),
-                  ),
-                  Text(
-                    '월 ${NumberFormat('#,###').format(farmland.monthlyRent ?? 0)}원',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        farmland.address,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // 구분선
+                Container(
+                  height: 1,
+                  color: Colors.grey.withValues(alpha: 0.1),
+                ),
+                const SizedBox(height: 16),
+                // 하단: 면적과 임대료
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '면적',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${farmland.areaSize}',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF4CAF50),
+                                ),
+                              ),
+                              TextSpan(
+                                text: '평',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '월 임대료',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${NumberFormat('#,###').format(farmland.monthlyRent ?? 0)}원',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF4CAF50),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1468,6 +1863,312 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _buildIdleFarmlandActionButtons() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        children: [
+          // 농지 관리 버튼
+          Expanded(
+            child: _buildActionButton(
+              icon: FontAwesomeIcons.seedling,
+              label: '농지 관리',
+              color: const Color(0xFF4CAF50),
+              onTap: () {
+                // 농지 관리 기능 - 농지 리스트 화면으로 이동
+                _navigateToIdleFarmlandList();
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 필터 버튼
+          Expanded(
+            child: _buildActionButton(
+              icon: FontAwesomeIcons.filter,
+              label: '필터',
+              color: const Color(0xFF2196F3),
+              onTap: () {
+                _showFilterBottomSheet();
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 정렬 버튼
+          Expanded(
+            child: _buildActionButton(
+              icon: FontAwesomeIcons.sort,
+              label: '정렬',
+              color: const Color(0xFFFF9800),
+              onTap: () {
+                _showSortBottomSheet();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // 핸들
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // 헤더
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Icon(
+                    FontAwesomeIcons.filter,
+                    color: const Color(0xFF2196F3),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    '필터 설정',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('완료'),
+                  ),
+                ],
+              ),
+            ),
+            // 필터 내용
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildFilterSection('면적', [
+                      '100평 미만',
+                      '100-300평',
+                      '300-500평',
+                      '500평 이상',
+                    ]),
+                    _buildFilterSection('임대료', [
+                      '10만원 미만',
+                      '10-30만원',
+                      '30-50만원',
+                      '50만원 이상',
+                    ]),
+                    _buildFilterSection('편의시설', [
+                      '수도 공급',
+                      '전기 공급',
+                      '농기구 포함',
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSortBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 핸들
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // 헤더
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Icon(
+                    FontAwesomeIcons.sort,
+                    color: const Color(0xFFFF9800),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    '정렬 기준',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 정렬 옵션들
+            _buildSortOption('최신순', true),
+            _buildSortOption('면적 큰 순', false),
+            _buildSortOption('면적 작은 순', false),
+            _buildSortOption('가격 높은 순', false),
+            _buildSortOption('가격 낮은 순', false),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterSection(String title, List<String> options) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((option) => FilterChip(
+            label: Text(option),
+            selected: false,
+            onSelected: (selected) {
+              // 필터 선택 로직
+            },
+            backgroundColor: Colors.grey[100],
+            selectedColor: const Color(0xFF2196F3).withOpacity(0.2),
+            checkmarkColor: const Color(0xFF2196F3),
+          )).toList(),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildSortOption(String title, bool isSelected) {
+    return ListTile(
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+          color: isSelected ? const Color(0xFFFF9800) : Colors.black87,
+        ),
+      ),
+      trailing: isSelected
+        ? const Icon(
+            Icons.check,
+            color: Color(0xFFFF9800),
+          )
+        : null,
+      onTap: () {
+        Navigator.pop(context);
+        // 정렬 로직 구현
+      },
+    );
+  }
 }
 
 class SpeechBubblePainter extends CustomPainter {
@@ -1507,6 +2208,228 @@ class SpeechBubblePainter extends CustomPainter {
 
     // 말풍선 그리기
     canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class WhiteSpeechBubblePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fillPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final strokePaint = Paint()
+      ..color = const Color(0xFFF2711C)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.1)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    final radius = 20.0;
+    final arrowSize = 8.0;
+
+    // 전체 말풍선을 하나의 경로로 그리기 (화살표와 본체 연결)
+    final path = Path();
+    
+    // 말풍선 본체의 둥근 사각형 부분
+    final bodyRect = Rect.fromLTWH(arrowSize, 0, size.width - arrowSize, size.height);
+    final bodyRRect = RRect.fromRectAndRadius(bodyRect, Radius.circular(radius));
+    path.addRRect(bodyRRect);
+    
+    // 화살표 부분을 본체와 연결
+    final arrowPath = Path();
+    arrowPath.moveTo(arrowSize, size.height * 0.5 - arrowSize * 0.5);
+    arrowPath.lineTo(0, size.height * 0.5);
+    arrowPath.lineTo(arrowSize, size.height * 0.5 + arrowSize * 0.5);
+    
+    // 화살표를 메인 경로에 결합하되, 연결 부분의 선은 제거
+    path.addPath(arrowPath, Offset.zero);
+
+    // 그림자 그리기
+    canvas.drawPath(path, shadowPaint);
+
+    // 흰색 배경 그리기
+    canvas.drawPath(path, fillPaint);
+
+    // 주황색 테두리 그리기 (화살표 연결 부분 제외)
+    // 본체 테두리
+    canvas.drawRRect(bodyRRect, strokePaint);
+    
+    // 화살표 테두리 (연결 부분 제외하고 외곽선만)
+    final arrowStrokePath = Path();
+    arrowStrokePath.moveTo(arrowSize, size.height * 0.5 - arrowSize * 0.5);
+    arrowStrokePath.lineTo(0, size.height * 0.5);
+    arrowStrokePath.lineTo(arrowSize, size.height * 0.5 + arrowSize * 0.5);
+    
+    canvas.drawPath(arrowStrokePath, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class LeftArrowSpeechBubblePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fillPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final strokePaint = Paint()
+      ..color = const Color(0xFFF2711C)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.1)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    final radius = 20.0;
+    final arrowSize = 8.0;
+
+    // 전체 말풍선을 하나의 경로로 그리기 (화살표와 본체 연결)
+    final path = Path();
+    
+    // 말풍선 본체의 둥근 사각형 부분
+    final bodyRect = Rect.fromLTWH(arrowSize, 0, size.width - arrowSize, size.height);
+    final bodyRRect = RRect.fromRectAndRadius(bodyRect, Radius.circular(radius));
+    path.addRRect(bodyRRect);
+    
+    // 왼쪽 중간에 화살표 부분을 본체와 연결
+    final arrowPath = Path();
+    arrowPath.moveTo(arrowSize, size.height * 0.5 - arrowSize * 0.5);
+    arrowPath.lineTo(0, size.height * 0.5);
+    arrowPath.lineTo(arrowSize, size.height * 0.5 + arrowSize * 0.5);
+    
+    // 화살표를 메인 경로에 결합
+    path.addPath(arrowPath, Offset.zero);
+
+    // 그림자 그리기
+    canvas.drawPath(path, shadowPaint);
+
+    // 흰색 배경 그리기
+    canvas.drawPath(path, fillPaint);
+
+    // 주황색 테두리 그리기 (화살표 연결 부분 제외)
+    // 본체 테두리
+    canvas.drawRRect(bodyRRect, strokePaint);
+    
+    // 화살표 테두리 (연결 부분 제외하고 외곽선만)
+    final arrowStrokePath = Path();
+    arrowStrokePath.moveTo(arrowSize, size.height * 0.5 - arrowSize * 0.5);
+    arrowStrokePath.lineTo(0, size.height * 0.5);
+    arrowStrokePath.lineTo(arrowSize, size.height * 0.5 + arrowSize * 0.5);
+    
+    canvas.drawPath(arrowStrokePath, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class ModernSpeechBubblePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 그라데이션 배경
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          Colors.white,
+          const Color(0xFFFAFAFA),
+        ],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
+
+    // 테두리
+    final strokePaint = Paint()
+      ..color = const Color(0xFFF2711C).withOpacity(0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    // 그림자 (더 부드럽고 자연스러운)
+    final shadowPaint = Paint()
+      ..color = const Color(0xFFF2711C).withOpacity(0.08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+
+    final shadowPaint2 = Paint()
+      ..color = Colors.black.withOpacity(0.06)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+
+    final radius = 18.0;
+    final arrowSize = 10.0;
+
+    // 말풍선 경로 생성
+    final path = Path();
+    
+    // 말풍선 본체 (더 둥글고 현대적인 형태)
+    final bodyRect = Rect.fromLTWH(arrowSize, 0, size.width - arrowSize, size.height);
+    final bodyRRect = RRect.fromRectAndRadius(bodyRect, Radius.circular(radius));
+    path.addRRect(bodyRRect);
+    
+    // 더 부드러운 화살표 (곡선 사용)
+    final arrowPath = Path();
+    arrowPath.moveTo(arrowSize, size.height * 0.5 - arrowSize * 0.4);
+    arrowPath.quadraticBezierTo(
+      arrowSize * 0.3, size.height * 0.5 - arrowSize * 0.1,
+      0, size.height * 0.5,
+    );
+    arrowPath.quadraticBezierTo(
+      arrowSize * 0.3, size.height * 0.5 + arrowSize * 0.1,
+      arrowSize, size.height * 0.5 + arrowSize * 0.4,
+    );
+    
+    path.addPath(arrowPath, Offset.zero);
+
+    // 그림자 그리기 (다중 그림자로 더 입체적)
+    canvas.drawPath(path, shadowPaint2);
+    canvas.drawPath(path, shadowPaint);
+
+    // 배경 그리기
+    canvas.drawPath(path, gradientPaint);
+
+    // 테두리 그리기
+    canvas.drawRRect(bodyRRect, strokePaint);
+    
+    // 화살표 테두리 (더 부드럽게)
+    final arrowStrokePath = Path();
+    arrowStrokePath.moveTo(arrowSize, size.height * 0.5 - arrowSize * 0.4);
+    arrowStrokePath.quadraticBezierTo(
+      arrowSize * 0.3, size.height * 0.5 - arrowSize * 0.1,
+      0, size.height * 0.5,
+    );
+    arrowStrokePath.quadraticBezierTo(
+      arrowSize * 0.3, size.height * 0.5 + arrowSize * 0.1,
+      arrowSize, size.height * 0.5 + arrowSize * 0.4,
+    );
+    
+    canvas.drawPath(arrowStrokePath, strokePaint);
+
+    // 내부 하이라이트 (더 현대적인 느낌)
+    final highlightPaint = Paint()
+      ..color = Colors.white.withOpacity(0.7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    
+    final highlightPath = Path();
+    final highlightRect = Rect.fromLTWH(
+      arrowSize + 2, 
+      2, 
+      size.width - arrowSize - 4, 
+      size.height - 4
+    );
+    final highlightRRect = RRect.fromRectAndRadius(
+      highlightRect, 
+      Radius.circular(radius - 2)
+    );
+    highlightPath.addRRect(highlightRRect);
+    canvas.drawPath(highlightPath, highlightPaint);
   }
 
   @override

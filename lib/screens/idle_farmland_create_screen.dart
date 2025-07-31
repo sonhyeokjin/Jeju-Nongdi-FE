@@ -135,7 +135,7 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(true);
         }
       },
       builder: (context, vm) {
@@ -198,7 +198,7 @@ class _IdleFarmlandCreateScreenState extends State<IdleFarmlandCreateScreen>
                 color: Color(0xFFF2711C),
                 size: 20,
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(context, true),
             ),
           ),
           const SizedBox(width: 16),
