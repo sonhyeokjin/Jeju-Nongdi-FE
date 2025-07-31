@@ -638,17 +638,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 1,
                                 color: Colors.grey[300],
                               ),
-                              IconButton(
-                                onPressed: _toggleFarmDisplay,
-                                icon: Icon(
-                                  _showFarms
-                                      ? Icons.agriculture
-                                      : Icons.agriculture_outlined,
-                                  size: 26,
-                                ),
-                                color: _showFarms ? Colors.green : Colors.grey,
-                                tooltip: _showFarms ? '농장 숨기기' : '농장 보기',
-                              ),
+                              // IconButton(
+                              //   onPressed: _toggleFarmDisplay,
+                              //   icon: Icon(
+                              //     _showFarms
+                              //         ? Icons.agriculture
+                              //         : Icons.agriculture_outlined,
+                              //     size: 26,
+                              //   ),
+                              //   color: _showFarms ? Colors.green : Colors.grey,
+                              //   tooltip: _showFarms ? '농장 숨기기' : '농장 보기',
+                              // ),
                             ],
                           ),
                         ),
