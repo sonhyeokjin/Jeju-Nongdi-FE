@@ -9,13 +9,16 @@ import 'package:jejunongdi/core/utils/logger.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/screens/job_list_screen.dart';
 import 'package:jejunongdi/screens/login_screen.dart';
+import 'package:jejunongdi/screens/chat_room_screen.dart';
 import 'package:jejunongdi/screens/widgets/job_posting_detail_sheet.dart';
 import 'package:jejunongdi/screens/job_posting_create_screen.dart';
 import 'package:jejunongdi/screens/ai_assistant_screen.dart';
 import 'package:jejunongdi/screens/idle_farmland_list_screen.dart';
 import 'package:jejunongdi/screens/idle_farmland_create_screen.dart';
+import 'package:jejunongdi/screens/idle_farmland_detail_screen.dart';
 import 'package:jejunongdi/core/models/idle_farmland_models.dart';
 import 'package:jejunongdi/core/services/idle_farmland_service.dart';
+import 'package:jejunongdi/redux/chat/chat_actions.dart';
 import 'package:intl/intl.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -1594,7 +1597,12 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // 유휴농지 상세 보기 (필요시 구현)
+            // 유휴농지 상세 페이지로 이동
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => IdleFarmlandDetailScreen(farmlandId: farmland.id),
+              ),
+            );
           },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
@@ -2171,6 +2179,74 @@ class _HomeScreenState extends State<HomeScreen> {
         // 정렬 로직 구현
       },
     );
+  }
+
+  void _startChatWithJobOwner(JobPostingResponse job) async {
+    final store = StoreProvider.of<AppState>(context, listen: false);
+    final user = store.state.userState.user;
+    
+    if (user == null) {
+      _showLoginRequiredDialog();
+      return;
+    }
+    
+    if (job.author.email?.isEmpty ?? true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('일자리 작성자의 연락처 정보가 없습니다.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    store.dispatch(GetOrCreateOneToOneRoomAction(job.author.email!));
+    
+    // 채팅방 생성/조회 완료를 기다리기 위해 작은 지연 후 채팅 화면으로 이동
+    Future.delayed(const Duration(milliseconds: 500), () {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ChatRoomScreen(
+            roomId: job.author.email!, // 임시로 이메일을 roomId로 사용
+            roomName: job.author.nickname,
+          ),
+        ),
+      );
+    });
+  }
+  
+  void _startChatWithFarmlandOwner(IdleFarmlandResponse farmland) async {
+    final store = StoreProvider.of<AppState>(context, listen: false);
+    final user = store.state.userState.user;
+    
+    if (user == null) {
+      _showLoginRequiredDialog();
+      return;
+    }
+    
+    if (farmland.contactEmail == null || farmland.contactEmail!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('농지 소유자의 연락처 정보가 없습니다.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    store.dispatch(GetOrCreateOneToOneRoomAction(farmland.contactEmail!));
+    
+    // 채팅방 생성/조회 완료를 기다리기 위해 작은 지연 후 채팅 화면으로 이동
+    Future.delayed(const Duration(milliseconds: 500), () {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ChatRoomScreen(
+            roomId: farmland.contactEmail!, // 임시로 이메일을 roomId로 사용
+            roomName: farmland.farmlandName,
+          ),
+        ),
+      );
+    });
   }
 }
 

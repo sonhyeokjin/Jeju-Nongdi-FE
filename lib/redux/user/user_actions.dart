@@ -181,3 +181,69 @@ class SignUpFailureAction extends UserAction {
   @override
   String toString() => 'SignUpFailureAction{error: $error}';
 }
+
+// 닉네임 중복 확인 요청 액션
+class CheckNicknameRequestAction extends UserAction {
+  final String nickname;
+
+  CheckNicknameRequestAction(this.nickname);
+
+  @override
+  String toString() => 'CheckNicknameRequestAction{nickname: $nickname}';
+}
+
+// 닉네임 중복 확인 성공 액션
+class CheckNicknameSuccessAction extends UserAction {
+  final bool available;
+  final String message;
+
+  CheckNicknameSuccessAction({
+    required this.available,
+    required this.message,
+  });
+
+  @override
+  String toString() => 'CheckNicknameSuccessAction{available: $available, message: $message}';
+}
+
+// 닉네임 변경 요청 액션
+class UpdateNicknameRequestAction extends UserAction {
+  final String nickname;
+
+  UpdateNicknameRequestAction(this.nickname);
+
+  @override
+  String toString() => 'UpdateNicknameRequestAction{nickname: $nickname}';
+}
+
+// 닉네임 변경 성공 액션
+class UpdateNicknameSuccessAction extends UserAction {
+  final String nickname;
+
+  UpdateNicknameSuccessAction(this.nickname);
+
+  @override
+  String toString() => 'UpdateNicknameSuccessAction{nickname: $nickname}';
+}
+
+// 프로필 이미지 변경 요청 액션
+class UpdateProfileImageRequestAction extends UserAction {
+  final String profileImageUrl;
+
+  UpdateProfileImageRequestAction(this.profileImageUrl);
+
+  @override
+  String toString() => 'UpdateProfileImageRequestAction{}';
+}
+
+// 프로필 이미지 변경 성공 액션
+class UpdateProfileImageSuccessAction extends UserAction {
+  @override
+  String toString() => 'UpdateProfileImageSuccessAction{}';
+}
+
+// 현재 사용자 정보 조회 요청 액션
+class GetCurrentUserRequestAction extends UserAction {
+  @override
+  String toString() => 'GetCurrentUserRequestAction{}';
+}

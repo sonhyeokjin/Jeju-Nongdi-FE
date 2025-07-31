@@ -121,15 +121,18 @@ class _JobPostingDetailScreenState extends State<JobPostingDetailScreen> {
           actions: [
             StoreConnector<AppState, VoidCallback>(
               converter: (store) => () {
-                store.dispatch(CreateChatRoomAction(
-                  chatType: 'JOB_POSTING',
-                  participantId: posting.author.id,
-                  referenceId: posting.id,
-                  initialMessage: '${posting.title} 공고에 문의드립니다.',
-                ));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('채팅방을 생성하고 있습니다...')),
-                );
+                // 새로운 API 사용: 1:1 채팅방 생성 (작성자 이메일로)
+                final email = posting.author.email;
+                if (email != null && email.isNotEmpty) {
+                  store.dispatch(GetOrCreateOneToOneRoomAction(email));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('채팅방을 생성하고 있습니다...')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('작성자 이메일 정보가 없어 채팅을 시작할 수 없습니다.')),
+                  );
+                }
               },
               builder: (context, startChat) => IconButton(
                 icon: const Icon(Icons.chat, color: Colors.white),

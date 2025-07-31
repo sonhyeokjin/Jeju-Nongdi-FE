@@ -29,7 +29,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   void initState() {
     super.initState();
+    print('ChatRoomScreen initiated with roomId: ${widget.roomId}');
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('Dispatching LoadChatMessagesAction for roomId: ${widget.roomId}');
       StoreProvider.of<AppState>(context, listen: false)
           .dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
     });
@@ -42,16 +44,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     });
 
-    // 입장 API 호출 및 읽음 처리
-    ChatService.instance.enterChatRoom(roomId: widget.roomId);
-    StoreProvider.of<AppState>(context, listen: false)
-        .dispatch(MarkMessagesAsReadAction(widget.roomId));
+    // 메시지 로드 후 별도 처리 없음 (새 API에서는 입장/읽음 처리 불필요)
   }
 
   @override
   void dispose() {
-    // 퇴장 API 호출
-    ChatService.instance.leaveChatRoom(roomId: widget.roomId);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -77,6 +74,51 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       body: StoreConnector<AppState, _ViewModel>(
         converter: (store) => _ViewModel.fromStore(store, widget.roomId),
         builder: (context, vm) {
+          // 에러 상태일 때 사용자에게 명확한 피드백 제공
+          if (vm.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '오류가 발생했습니다',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${vm.error}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      StoreProvider.of<AppState>(context, listen: false)
+                          .dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF2711C),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('다시 시도'),
+                  ),
+                ],
+              ),
+            );
+          }
+          
           return Column(
             children: [
               Expanded(
@@ -95,7 +137,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       );
                     }
                     final message = vm.messages[index];
-                    final isMe = message.sender.id.toString() == vm.myUserId;
+                    final isMe = vm.myUserId != null && message.sender.id.toString() == vm.myUserId;
                     return _MessageBubble(message: message, isMe: isMe);
                   },
                 ),
@@ -155,7 +197,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 }
 
 class _MessageBubble extends StatelessWidget {
-  final ChatMessageResponse message;
+  final MessageDto message;
   final bool isMe;
 
   const _MessageBubble({required this.message, required this.isMe});
@@ -190,11 +232,18 @@ class _MessageBubble extends StatelessWidget {
 
 class _ViewModel {
   final bool isLoading;
-  final List<ChatMessageResponse> messages;
+  final List<MessageDto> messages;
   final bool hasMore;
   final String? myUserId;
+  final String? error;
 
-  _ViewModel({required this.isLoading, required this.messages, required this.hasMore, this.myUserId});
+  _ViewModel({
+    required this.isLoading, 
+    required this.messages, 
+    required this.hasMore, 
+    this.myUserId,
+    this.error,
+  });
 
   static _ViewModel fromStore(Store<AppState> store, String roomId) {
     final chatState = store.state.chatState;
@@ -202,7 +251,8 @@ class _ViewModel {
       isLoading: chatState.isLoading,
       messages: (chatState.messages[roomId] ?? [])..sort((a,b) => b.sentAt.compareTo(a.sentAt)),
       hasMore: chatState.hasMoreMessages[roomId] ?? true,
-      myUserId: store.state.userState.user?.id,
+      myUserId: store.state.userState.user?.id.toString(),
+      error: chatState.error,
     );
   }
 }

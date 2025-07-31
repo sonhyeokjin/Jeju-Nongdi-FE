@@ -8,6 +8,7 @@ import 'package:jejunongdi/redux/user/user_state.dart';
 import 'package:jejunongdi/redux/user/user_model.dart';
 import 'package:jejunongdi/screens/my_mentoring_list_screen.dart';
 import 'package:jejunongdi/screens/user_preference_screen.dart';
+import 'package:jejunongdi/screens/profile_edit_screen.dart';
 
 /// 동적인 AppBar와 확장된 레이아웃이 적용된 새로운 마이페이지 화면입니다.
 class MyPageScreen extends StatefulWidget {
@@ -327,7 +328,11 @@ class _MyPageScreenState extends State<MyPageScreen> with TickerProviderStateMix
             ),
             child: IconButton(
               onPressed: () {
-                // TODO: 프로필 수정 화면으로 이동하는 로직 구현
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileEditScreen(),
+                  ),
+                );
               },
               icon: Icon(Icons.edit, size: 20, color: Colors.grey[700]),
               tooltip: '프로필 수정',

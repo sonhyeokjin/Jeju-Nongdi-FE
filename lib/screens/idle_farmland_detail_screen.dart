@@ -5,6 +5,8 @@ import 'package:jejunongdi/core/models/idle_farmland_models.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/idle_farmland/idle_farmland_actions.dart';
 import 'package:jejunongdi/screens/idle_farmland_edit_screen.dart';
+import 'package:jejunongdi/screens/chat_room_screen.dart';
+import 'package:jejunongdi/redux/chat/chat_actions.dart';
 import 'package:redux/redux.dart';
 
 class IdleFarmlandDetailScreen extends StatefulWidget {
@@ -487,6 +489,8 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen>
           _buildAmenitiesSection(farmland),
           const SizedBox(height: 20),
           _buildDescriptionSection(farmland),
+          const SizedBox(height: 20),
+          _buildChatButton(farmland),
           const SizedBox(height: 40),
         ],
       ),
@@ -554,9 +558,9 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen>
             const SizedBox(height: 16),
             _buildInfoRow(FontAwesomeIcons.envelope, "이메일", farmland.contactEmail ?? '없음'),
             const SizedBox(height: 16),
-            _buildInfoRow(FontAwesomeIcons.mountain, "토양 종류", farmland.soilType ?? '없음'),
+            _buildInfoRow(FontAwesomeIcons.mountain, "토양 종류", _getSoilTypeDisplayName(farmland.soilType)),
             const SizedBox(height: 16),
-            _buildInfoRow(FontAwesomeIcons.bullseye, "사용 목적", farmland.usageType ?? '없음'),
+            _buildInfoRow(FontAwesomeIcons.bullseye, "사용 목적", _getUsageTypeDisplayName(farmland.usageType)),
           ],
         ),
       ),
@@ -865,6 +869,192 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen>
         );
       },
     );
+  }
+
+  Widget _buildChatButton(IdleFarmlandResponse farmland) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFF2711C),
+            Color(0xFFFF8C42),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF2711C).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: () => _startChatWithFarmlandOwner(farmland),
+        icon: const Icon(
+          Icons.chat_bubble_outline,
+          color: Colors.white,
+          size: 20,
+        ),
+        label: const Text(
+          '농지 소유자와 채팅하기',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _startChatWithFarmlandOwner(IdleFarmlandResponse farmland) async {
+    final store = StoreProvider.of<AppState>(context, listen: false);
+    final user = store.state.userState.user;
+    
+    if (user == null) {
+      _showLoginRequiredDialog();
+      return;
+    }
+    
+    if (farmland.contactEmail == null || farmland.contactEmail!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('농지 소유자의 연락처 정보가 없습니다.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    store.dispatch(GetOrCreateOneToOneRoomAction(farmland.contactEmail!));
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ChatRoomScreen(
+            roomId: farmland.contactEmail!,
+            roomName: farmland.farmlandName,
+          ),
+        ),
+      );
+    });
+  }
+
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('로그인 필요'),
+        content: const Text('채팅을 하려면 로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              // 로그인 페이지로 이동 로직 필요
+            },
+            child: const Text('로그인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 토양 종류를 한글로 변환하는 함수
+  String _getSoilTypeDisplayName(String? soilType) {
+    if (soilType == null || soilType.isEmpty) return '없음';
+    
+    switch (soilType.toUpperCase()) {
+      case 'CLAY':
+        return '점토';
+      case 'SANDY':
+        return '사질토';
+      case 'LOAM':
+        return '양토';
+      case 'SILT':
+        return '미사토';
+      case 'HUMUS':
+        return '부엽토';
+      case 'PEAT':
+        return '이탄토';
+      case 'VOLCANIC':
+        return '화산토';
+      case 'ALLUVIAL':
+        return '충적토';
+      default:
+        return soilType; // 알 수 없는 타입은 원본 값 반환
+    }
+  }
+
+  // 사용 목적을 한글로 변환하는 함수
+  String _getUsageTypeDisplayName(String? usageType) {
+    if (usageType == null || usageType.isEmpty) return '없음';
+    
+    switch (usageType.toUpperCase()) {
+      case 'RICE':
+        return '벼농사';
+      case 'VEGETABLE':
+        return '채소재배';
+      case 'FRUIT':
+        return '과수재배';
+      case 'FLOWER':
+        return '화훼재배';
+      case 'GRAIN':
+        return '곡물재배';
+      case 'HERB':
+        return '약초재배';
+      case 'GREENHOUSE':
+        return '시설재배';
+      case 'ORGANIC':
+        return '유기농재배';
+      case 'PASTURE':
+        return '목초지';
+      case 'EXPERIMENTAL':
+        return '시험재배';
+      case 'MIXED':
+        return '혼합재배';
+      // 추가적인 사용 목적 타입들
+      case 'SHORT_TERM_RENTAL':
+        return '단기임대';
+      case 'LONG_TERM_RENTAL':
+        return '장기임대';
+      case 'CULTIVATION':
+        return '경작용';
+      case 'FARMING':
+        return '농업용';
+      case 'LIVESTOCK':
+        return '축산용';
+      case 'RECREATION':
+        return '휴양용';
+      case 'EDUCATION':
+        return '교육용';
+      case 'RESEARCH':
+        return '연구용';
+      case 'STORAGE':
+        return '저장용';
+      case 'PROCESSING':
+        return '가공용';
+      default:
+        // 알 수 없는 타입의 경우 첫 글자를 대문자로, 나머지는 소문자로 변환하여 표시
+        return usageType.toLowerCase().split('_').map((word) => 
+          word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : word
+        ).join(' ');
+    }
   }
 }
 

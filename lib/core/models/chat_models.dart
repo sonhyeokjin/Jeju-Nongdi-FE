@@ -118,3 +118,107 @@ class UnreadCountResponse {
       _$UnreadCountResponseFromJson(json);
   Map<String, dynamic> toJson() => _$UnreadCountResponseToJson(this);
 }
+
+// WebSocket 연결 정보 모델
+@JsonSerializable()
+class WebSocketConnectionInfo {
+  final String endpoint;
+  final String protocol;
+  final String? authenticationMethod;
+  final Map<String, dynamic>? additionalParams;
+
+  WebSocketConnectionInfo({
+    required this.endpoint,
+    required this.protocol,
+    this.authenticationMethod,
+    this.additionalParams,
+  });
+
+  factory WebSocketConnectionInfo.fromJson(Map<String, dynamic> json) =>
+      _$WebSocketConnectionInfoFromJson(json);
+  Map<String, dynamic> toJson() => _$WebSocketConnectionInfoToJson(this);
+}
+
+// 채팅방 상세 정보 (API 명세의 ChatRoomDto)
+@JsonSerializable()
+class ChatRoomDto {
+  final String roomId;
+  final String? roomName;
+  final String chatType;
+  final List<UserResponse> participants;
+  final String? lastMessage;
+  final DateTime? lastMessageTime;
+  final int unreadCount;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+
+  ChatRoomDto({
+    required this.roomId,
+    this.roomName,
+    required this.chatType,
+    required this.participants,
+    this.lastMessage,
+    this.lastMessageTime,
+    this.unreadCount = 0,
+    required this.createdAt,
+    this.updatedAt,
+  });
+
+  factory ChatRoomDto.fromJson(Map<String, dynamic> json) =>
+      _$ChatRoomDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$ChatRoomDtoToJson(this);
+}
+
+// 채팅방 뷰 모델 (API 명세의 ChatRoomView)
+@JsonSerializable()
+class ChatRoomView {
+  final String roomId;
+  final String? roomName;
+  final UserResponse? otherUser;
+  final String? lastMessage;
+  final DateTime? lastMessageTime;
+  final int unreadCount;
+  final String chatType;
+
+  ChatRoomView({
+    required this.roomId,
+    this.roomName,
+    this.otherUser,
+    this.lastMessage,
+    this.lastMessageTime,
+    this.unreadCount = 0,
+    required this.chatType,
+  });
+
+  factory ChatRoomView.fromJson(Map<String, dynamic> json) =>
+      _$ChatRoomViewFromJson(json);
+  Map<String, dynamic> toJson() => _$ChatRoomViewToJson(this);
+}
+
+// 메시지 DTO (API 명세의 MessageDto)
+@JsonSerializable()
+class MessageDto {
+  final String messageId;
+  final String roomId;
+  final UserResponse sender;
+  final String content;
+  final String? fileUrl;
+  final String messageType;
+  final DateTime sentAt;
+  final bool isRead;
+
+  MessageDto({
+    required this.messageId,
+    required this.roomId,
+    required this.sender,
+    required this.content,
+    this.fileUrl,
+    required this.messageType,
+    required this.sentAt,
+    this.isRead = false,
+  });
+
+  factory MessageDto.fromJson(Map<String, dynamic> json) =>
+      _$MessageDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$MessageDtoToJson(this);
+}

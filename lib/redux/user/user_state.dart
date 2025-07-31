@@ -16,6 +16,8 @@ class UserState {
   final String? refreshToken;
   final String? errorMessage;
   final bool isLoading;
+  final bool? isNicknameAvailable;
+  final String? nicknameCheckMessage;
 
   const UserState({
     required this.authStatus,
@@ -24,6 +26,8 @@ class UserState {
     this.refreshToken,
     this.errorMessage,
     required this.isLoading,
+    this.isNicknameAvailable,
+    this.nicknameCheckMessage,
   });
 
   // 초기 상태
@@ -33,7 +37,9 @@ class UserState {
         accessToken = null,
         refreshToken = null,
         errorMessage = null,
-        isLoading = false;
+        isLoading = false,
+        isNicknameAvailable = null,
+        nicknameCheckMessage = null;
 
   // copyWith 메서드
   UserState copyWith({
@@ -43,6 +49,8 @@ class UserState {
     String? refreshToken,
     String? errorMessage,
     bool? isLoading,
+    bool? isNicknameAvailable,
+    String? nicknameCheckMessage,
   }) {
     return UserState(
       authStatus: authStatus ?? this.authStatus,
@@ -51,6 +59,8 @@ class UserState {
       refreshToken: refreshToken ?? this.refreshToken,
       errorMessage: errorMessage ?? this.errorMessage,
       isLoading: isLoading ?? this.isLoading,
+      isNicknameAvailable: isNicknameAvailable ?? this.isNicknameAvailable,
+      nicknameCheckMessage: nicknameCheckMessage ?? this.nicknameCheckMessage,
     );
   }
 
@@ -69,7 +79,9 @@ class UserState {
           accessToken == other.accessToken &&
           refreshToken == other.refreshToken &&
           errorMessage == other.errorMessage &&
-          isLoading == other.isLoading;
+          isLoading == other.isLoading &&
+          isNicknameAvailable == other.isNicknameAvailable &&
+          nicknameCheckMessage == other.nicknameCheckMessage;
 
   @override
   int get hashCode =>
@@ -78,7 +90,9 @@ class UserState {
       accessToken.hashCode ^
       refreshToken.hashCode ^
       errorMessage.hashCode ^
-      isLoading.hashCode;
+      isLoading.hashCode ^
+      isNicknameAvailable.hashCode ^
+      nicknameCheckMessage.hashCode;
 
   @override
   String toString() {

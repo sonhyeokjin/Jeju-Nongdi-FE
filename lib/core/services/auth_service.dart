@@ -240,11 +240,45 @@ class AuthService {
     try {
       Logger.info('현재 사용자 정보 조회');
       
-      // 먼저 백엔드에서 실제 사용자 정보 조회 시도
+      // 새로운 프로필 조회 엔드포인트 사용
       try {
-        final response = await _apiClient.get<Map<String, dynamic>>('/auth/me');
+        final response = await _apiClient.get<Map<String, dynamic>>('/api/auth/profile');
         if (response.data != null) {
-          final user = user_model.User.fromJson(response.data!);
+          // 서버 응답에서 사용자 정보 추출
+          final responseData = response.data!;
+          
+          // UserRole 변환
+          user_model.UserRole userRole = user_model.UserRole.worker;
+          if (responseData.containsKey('role')) {
+            switch (responseData['role'].toString().toUpperCase()) {
+              case 'USER':
+              case 'WORKER':
+                userRole = user_model.UserRole.worker;
+                break;
+              case 'ADMIN':
+              case 'MASTER':
+                userRole = user_model.UserRole.master;
+                break;
+              default:
+                userRole = user_model.UserRole.worker;
+            }
+          }
+          
+          // User 모델 생성
+          final user = user_model.User(
+            id: responseData['email'] ?? responseData['id']?.toString() ?? '',
+            email: responseData['email'] ?? '',
+            name: responseData['name'] ?? '',
+            nickname: responseData['nickname'] ?? '',
+            role: userRole,
+            isActive: responseData['active'] ?? true,
+            createdAt: responseData['createdAt'] != null 
+                ? DateTime.tryParse(responseData['createdAt']) ?? DateTime.now()
+                : DateTime.now(),
+            updatedAt: responseData['updatedAt'] != null 
+                ? DateTime.tryParse(responseData['updatedAt']) ?? DateTime.now()
+                : DateTime.now(),
+          );
           
           // 새로운 정보를 로컬에 업데이트
           await _saveUserInfo(user);
@@ -275,9 +309,7 @@ class AuthService {
     }
   }
   
-  // 비밀번호 변경 (백엔드 API 미지원)
-  // TODO: 백엔드에 비밀번호 변경 API가 추가되면 활성화
-  /*
+  // 비밀번호 변경
   Future<ApiResult<void>> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -285,10 +317,12 @@ class AuthService {
     try {
       Logger.info('비밀번호 변경 시도');
       
-      await _apiClient.put('/auth/change-password', data: {
-        'currentPassword': currentPassword,
-        'newPassword': newPassword,
-      });
+      final request = auth_models.UpdatePasswordRequest(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      
+      await _apiClient.put('/api/auth/update-password', data: request.toJson());
       
       Logger.info('비밀번호 변경 성공');
       return ApiResult.success(null);
@@ -301,7 +335,62 @@ class AuthService {
       }
     }
   }
-  */
+
+  // 닉네임 변경
+  Future<ApiResult<void>> updateNickname(String nickname) async {
+    try {
+      Logger.info('닉네임 변경 시도: $nickname');
+      
+      final request = auth_models.UpdateNicknameRequest(nickname: nickname);
+      await _apiClient.put('/api/auth/update-nickname', data: request.toJson());
+      
+      // 로컬 사용자 정보 업데이트
+      final savedUser = await getSavedUserInfo();
+      if (savedUser != null) {
+        final updatedUser = user_model.User(
+          id: savedUser.id,
+          email: savedUser.email,
+          name: savedUser.name,
+          nickname: nickname,
+          role: savedUser.role,
+          isActive: savedUser.isActive,
+          createdAt: savedUser.createdAt,
+          updatedAt: DateTime.now(),
+        );
+        await _saveUserInfo(updatedUser);
+      }
+      
+      Logger.info('닉네임 변경 성공: $nickname');
+      return ApiResult.success(null);
+    } catch (e) {
+      Logger.error('닉네임 변경 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('닉네임 변경 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
+  // 프로필 이미지 변경
+  Future<ApiResult<void>> updateProfileImage(String profileImageUrl) async {
+    try {
+      Logger.info('프로필 이미지 변경 시도');
+      
+      final request = auth_models.UpdateProfileImageRequest(profileImage: profileImageUrl);
+      await _apiClient.put('/api/auth/update-profile-image', data: request.toJson());
+      
+      Logger.info('프로필 이미지 변경 성공');
+      return ApiResult.success(null);
+    } catch (e) {
+      Logger.error('프로필 이미지 변경 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('프로필 이미지 변경 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
   
   // 비밀번호 재설정 요청 (백엔드 API 미지원)
   // TODO: 백엔드에 비밀번호 재설정 API가 추가되면 활성화
@@ -327,6 +416,34 @@ class AuthService {
   }
   */
   
+  // 닉네임 중복 확인
+  Future<ApiResult<auth_models.CheckNicknameResponse>> checkNicknameAvailability(String nickname) async {
+    try {
+      Logger.info('닉네임 중복 확인: $nickname');
+      
+      final request = auth_models.CheckNicknameRequest(nickname: nickname);
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/api/auth/check-nickname',
+        data: request.toJson(),
+      );
+      
+      if (response.data != null) {
+        final checkResult = auth_models.CheckNicknameResponse.fromJson(response.data!);
+        Logger.info('닉네임 중복 확인 결과: ${checkResult.available} - ${checkResult.message}');
+        return ApiResult.success(checkResult);
+      } else {
+        return ApiResult.failure(const UnknownException('닉네임 중복 확인 응답 데이터가 없습니다.'));
+      }
+    } catch (e) {
+      Logger.error('닉네임 중복 확인 실패', error: e);
+      if (e is ApiException) {
+        return ApiResult.failure(e);
+      } else {
+        return ApiResult.failure(UnknownException('닉네임 중복 확인 중 오류가 발생했습니다: $e'));
+      }
+    }
+  }
+
   // 이메일 중복 확인 (백엔드 API 미지원)
   // TODO: 백엔드에 이메일 중복 확인 API가 추가되면 활성화
   /*

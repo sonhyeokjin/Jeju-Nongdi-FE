@@ -74,3 +74,55 @@ Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
   'nickname': instance.nickname,
   'phone': instance.phone,
 };
+
+CheckNicknameRequest _$CheckNicknameRequestFromJson(
+  Map<String, dynamic> json,
+) => CheckNicknameRequest(nickname: json['nickname'] as String);
+
+Map<String, dynamic> _$CheckNicknameRequestToJson(
+  CheckNicknameRequest instance,
+) => <String, dynamic>{'nickname': instance.nickname};
+
+CheckNicknameResponse _$CheckNicknameResponseFromJson(
+  Map<String, dynamic> json,
+) => CheckNicknameResponse(
+  available: json['available'] as bool,
+  message: json['message'] as String,
+);
+
+Map<String, dynamic> _$CheckNicknameResponseToJson(
+  CheckNicknameResponse instance,
+) => <String, dynamic>{
+  'available': instance.available,
+  'message': instance.message,
+};
+
+UpdatePasswordRequest _$UpdatePasswordRequestFromJson(
+  Map<String, dynamic> json,
+) => UpdatePasswordRequest(
+  currentPassword: json['currentPassword'] as String,
+  newPassword: json['newPassword'] as String,
+);
+
+Map<String, dynamic> _$UpdatePasswordRequestToJson(
+  UpdatePasswordRequest instance,
+) => <String, dynamic>{
+  'currentPassword': instance.currentPassword,
+  'newPassword': instance.newPassword,
+};
+
+UpdateNicknameRequest _$UpdateNicknameRequestFromJson(
+  Map<String, dynamic> json,
+) => UpdateNicknameRequest(nickname: json['nickname'] as String);
+
+Map<String, dynamic> _$UpdateNicknameRequestToJson(
+  UpdateNicknameRequest instance,
+) => <String, dynamic>{'nickname': instance.nickname};
+
+UpdateProfileImageRequest _$UpdateProfileImageRequestFromJson(
+  Map<String, dynamic> json,
+) => UpdateProfileImageRequest(profileImage: json['profileImage'] as String);
+
+Map<String, dynamic> _$UpdateProfileImageRequestToJson(
+  UpdateProfileImageRequest instance,
+) => <String, dynamic>{'profileImage': instance.profileImage};
