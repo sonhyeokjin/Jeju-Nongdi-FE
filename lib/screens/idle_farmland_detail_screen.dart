@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -940,15 +941,29 @@ class _IdleFarmlandDetailScreenState extends State<IdleFarmlandDetailScreen>
     
     store.dispatch(GetOrCreateOneToOneRoomAction(farmland.contactEmail!));
     
-    Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ChatRoomScreen(
-            roomId: farmland.contactEmail!,
-            roomName: farmland.farmlandName,
+    // 상태 리스너를 통해 채팅방 생성 완료 시 네비게이션
+    StreamSubscription? subscription;
+    subscription = store.onChange.listen((state) {
+      if (!state.chatState.isLoading && 
+          state.chatState.error == null && 
+          state.chatState.oneToOneRooms.containsKey(farmland.contactEmail!)) {
+        subscription?.cancel();
+        final chatRoom = state.chatState.oneToOneRooms[farmland.contactEmail!]!;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ChatRoomScreen(
+              roomId: chatRoom.roomId,
+              roomName: farmland.farmlandName,
+            ),
           ),
-        ),
-      );
+        );
+      } else if (!state.chatState.isLoading && state.chatState.error != null) {
+        subscription?.cancel();
+        // 에러 처리
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('채팅방 생성 실패: ${state.chatState.error}')),
+        );
+      }
     });
   }
 

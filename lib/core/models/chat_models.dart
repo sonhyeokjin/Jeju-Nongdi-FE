@@ -124,19 +124,47 @@ class UnreadCountResponse {
 class WebSocketConnectionInfo {
   final String endpoint;
   final String protocol;
-  final String? authenticationMethod;
-  final Map<String, dynamic>? additionalParams;
+  final String? authentication;
+  final String? sendDestination;
+  final String? subscribePattern;
+  final bool? sockJsEnabled;
 
   WebSocketConnectionInfo({
     required this.endpoint,
     required this.protocol,
-    this.authenticationMethod,
-    this.additionalParams,
+    this.authentication,
+    this.sendDestination,
+    this.subscribePattern,
+    this.sockJsEnabled,
   });
 
   factory WebSocketConnectionInfo.fromJson(Map<String, dynamic> json) =>
       _$WebSocketConnectionInfoFromJson(json);
   Map<String, dynamic> toJson() => _$WebSocketConnectionInfoToJson(this);
+}
+
+// 1:1 채팅방 조회/생성 API 응답 모델 
+@JsonSerializable()
+class OneToOneChatRoomDto {
+  final String roomId;
+  final int user1Id;
+  final int user2Id;
+  final DateTime createdAt;
+  final String otherUserNickname;
+  final String? otherUserProfileImage;
+
+  OneToOneChatRoomDto({
+    required this.roomId,
+    required this.user1Id,
+    required this.user2Id,
+    required this.createdAt,
+    required this.otherUserNickname,
+    this.otherUserProfileImage,
+  });
+
+  factory OneToOneChatRoomDto.fromJson(Map<String, dynamic> json) =>
+      _$OneToOneChatRoomDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$OneToOneChatRoomDtoToJson(this);
 }
 
 // 채팅방 상세 정보 (API 명세의 ChatRoomDto)
@@ -170,7 +198,6 @@ class ChatRoomDto {
 }
 
 // 채팅방 뷰 모델 (API 명세의 ChatRoomView)
-@JsonSerializable()
 class ChatRoomView {
   final String roomId;
   final String? roomName;
@@ -187,35 +214,100 @@ class ChatRoomView {
     this.lastMessage,
     this.lastMessageTime,
     this.unreadCount = 0,
-    required this.chatType,
+    this.chatType = 'GENERAL', // 기본값 제공
   });
 
-  factory ChatRoomView.fromJson(Map<String, dynamic> json) =>
-      _$ChatRoomViewFromJson(json);
-  Map<String, dynamic> toJson() => _$ChatRoomViewToJson(this);
+  factory ChatRoomView.fromJson(Map<String, dynamic> json) {
+    try {
+      print('🔍 ChatRoomView 파싱 중: $json');
+      
+      // roomId 검증
+      final roomId = json['roomId'] as String?;
+      if (roomId == null || roomId.isEmpty) {
+        throw Exception('roomId가 null이거나 비어있습니다');
+      }
+      
+      // otherUser 파싱
+      UserResponse? otherUser;
+      if (json['otherUser'] != null) {
+        try {
+          if (json['otherUser'] is Map<String, dynamic>) {
+            otherUser = UserResponse.fromJson(json['otherUser'] as Map<String, dynamic>);
+          }
+        } catch (e) {
+          print('⚠️ otherUser 파싱 실패: $e');
+          otherUser = null;
+        }
+      }
+      
+      // lastMessageTime 파싱
+      DateTime? lastMessageTime;
+      if (json['lastMessageTime'] != null) {
+        try {
+          if (json['lastMessageTime'] is String) {
+            lastMessageTime = DateTime.parse(json['lastMessageTime'] as String);
+          }
+        } catch (e) {
+          print('⚠️ lastMessageTime 파싱 실패: $e');
+          lastMessageTime = null;
+        }
+      }
+      
+      final result = ChatRoomView(
+        roomId: roomId,
+        roomName: json['roomName'] as String?,
+        otherUser: otherUser,
+        lastMessage: json['lastMessage'] as String?,
+        lastMessageTime: lastMessageTime,
+        unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+        chatType: json['chatType'] as String? ?? 'GENERAL',
+      );
+      
+      print('✅ ChatRoomView 파싱 성공: roomId=$roomId, chatType=${result.chatType}');
+      return result;
+    } catch (e) {
+      print('❌ ChatRoomView 파싱 오류: $e');
+      print('📊 원본 데이터: $json');
+      rethrow;
+    }
+  }
+  
+  Map<String, dynamic> toJson() => {
+    'roomId': roomId,
+    'roomName': roomName,
+    'otherUser': otherUser?.toJson(),
+    'lastMessage': lastMessage,
+    'lastMessageTime': lastMessageTime?.toIso8601String(),
+    'unreadCount': unreadCount,
+    'chatType': chatType,
+  };
 }
 
 // 메시지 DTO (API 명세의 MessageDto)
 @JsonSerializable()
 class MessageDto {
-  final String messageId;
+  final String id;
   final String roomId;
-  final UserResponse sender;
+  final UserResponse senderId;
+  final String email;
   final String content;
   final String? fileUrl;
   final String messageType;
-  final DateTime sentAt;
+  final DateTime createdAt;
   final bool isRead;
+  final String? senderProfileImage;
 
   MessageDto({
-    required this.messageId,
+    required this.id,
     required this.roomId,
-    required this.sender,
+    required this.senderId,
+    required this.email,
     required this.content,
     this.fileUrl,
     required this.messageType,
-    required this.sentAt,
+    required this.createdAt,
     this.isRead = false,
+    this.senderProfileImage,
   });
 
   factory MessageDto.fromJson(Map<String, dynamic> json) =>

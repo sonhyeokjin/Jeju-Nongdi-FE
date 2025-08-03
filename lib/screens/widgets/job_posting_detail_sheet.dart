@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:jejunongdi/core/models/job_posting_model.dart';
@@ -269,7 +270,10 @@ class JobPostingDetailSheet extends StatelessWidget {
       return;
     }
     
-    if (job.author.email?.isEmpty ?? true) {
+    // 더 안전한 이메일 유효성 검사
+    final authorEmail = job.author.email;
+    if (authorEmail == null || authorEmail.trim().isEmpty) {
+      print('❌ 일자리 작성자 이메일이 없음: $authorEmail');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('일자리 작성자의 연락처 정보가 없습니다.'),
@@ -279,18 +283,62 @@ class JobPostingDetailSheet extends StatelessWidget {
       return;
     }
     
-    store.dispatch(GetOrCreateOneToOneRoomAction(job.author.email!));
+    print('🚀 채팅방 생성 시도: targetEmail=$authorEmail');
+    store.dispatch(GetOrCreateOneToOneRoomAction(authorEmail));
     
-    Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.of(context).pop(); // 상세 시트 닫기
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ChatRoomScreen(
-            roomId: job.author.email!,
-            roomName: job.author.nickname,
+    // 로딩 표시
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('채팅방을 생성하고 있습니다...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    
+    // 상태 리스너를 통해 채팅방 생성 완료 시 네비게이션
+    StreamSubscription? subscription;
+    int attempts = 0;
+    const maxAttempts = 10; // 최대 10초 대기
+    
+    subscription = store.onChange.listen((state) {
+      attempts++;
+      print('🔄 상태 변경 감지 시도 $attempts: loading=${state.chatState.isLoading}, error=${state.chatState.error}');
+      
+      if (!state.chatState.isLoading && 
+          state.chatState.error == null && 
+          state.chatState.oneToOneRooms.containsKey(authorEmail)) {
+        subscription?.cancel();
+        final chatRoom = state.chatState.oneToOneRooms[authorEmail]!;
+        print('✅ 채팅방 생성 완료: roomId=${chatRoom.roomId}');
+        
+        Navigator.of(context).pop(); // 상세 시트 닫기
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ChatRoomScreen(
+              roomId: chatRoom.roomId,
+              roomName: job.author.nickname,
+            ),
           ),
-        ),
-      );
+        );
+      } else if (!state.chatState.isLoading && state.chatState.error != null) {
+        subscription?.cancel();
+        print('❌ 채팅방 생성 실패: ${state.chatState.error}');
+        // 에러 처리
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('채팅방 생성 실패: ${state.chatState.error}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (attempts >= maxAttempts) {
+        subscription?.cancel();
+        print('⏰ 채팅방 생성 시간 초과');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('채팅방 생성 시간이 초과되었습니다. 다시 시도해주세요.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     });
   }
 

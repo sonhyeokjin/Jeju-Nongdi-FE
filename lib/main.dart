@@ -10,6 +10,7 @@ import 'package:jejunongdi/screens/main_navigation.dart';
 import 'package:jejunongdi/screens/login_screen.dart';
 import 'package:jejunongdi/screens/signup_screen.dart';
 import 'package:jejunongdi/core/config/environment.dart';
+import 'package:jejunongdi/core/services/websocket_service.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -27,6 +28,10 @@ Future<void> main() async {
   // Redux Store 초기화
   redux_store.initializeStore();
   print('✅ Redux Store 초기화 완료');
+
+  // WebSocketService에 Redux Store 설정
+  WebSocketService.instance.setStore(redux_store.store);
+  print('✅ WebSocketService Redux Store 연동 완료');
 
   // 모바일 환경에서만 네이버 지도 API 키 초기화
   if (!kIsWeb) {

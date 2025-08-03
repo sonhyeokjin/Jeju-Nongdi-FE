@@ -85,21 +85,20 @@ class DeleteChatRoomSuccessAction {
   DeleteChatRoomSuccessAction(this.roomId);
 }
 
-// --- 더미 데이터 생성 관련 액션 ---
-class CreateDummyChatRoomsAction {}
+// --- WebSocket 실시간 연결 관련 액션 ---
+class ConnectWebSocketAction {}
 
-class CreateDummyChatRoomsSuccessAction {
-  final List<ChatRoomView> dummyChatRooms;
-  CreateDummyChatRoomsSuccessAction(this.dummyChatRooms);
-}
+class ConnectWebSocketSuccessAction {}
 
-class CreateDummyMessagesAction {
+class DisconnectWebSocketAction {}
+
+class JoinChatRoomAction {
   final String roomId;
-  CreateDummyMessagesAction(this.roomId);
+  JoinChatRoomAction(this.roomId);
 }
 
-class CreateDummyMessagesSuccessAction {
+class LeaveChatRoomAction {
   final String roomId;
-  final List<MessageDto> dummyMessages;
-  CreateDummyMessagesSuccessAction(this.roomId, this.dummyMessages);
+  LeaveChatRoomAction(this.roomId);
 }
+
