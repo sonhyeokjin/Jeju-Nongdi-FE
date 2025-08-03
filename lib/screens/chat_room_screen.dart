@@ -148,7 +148,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       );
                     }
                     final message = vm.messages[index];
-                    final isMe = vm.myUserId != null && message.sender.id.toString() == vm.myUserId;
+                    final isMe = vm.myUserId != null && message.senderId.id.toString() == vm.myUserId;
                     return _MessageBubble(message: message, isMe: isMe);
                   },
                 );
@@ -268,7 +268,7 @@ class _ViewModel {
     }
     
     for (int i = 0; i < messages.length; i++) {
-      if (messages[i].messageId != other.messages[i].messageId) {
+      if (messages[i].id != other.messages[i].id) {
         print('🔍 _ViewModel 비교: 메시지 ID 다름');
         return false;
       }
@@ -289,7 +289,7 @@ class _ViewModel {
     hasMore,
     myUserId,
     error,
-    messages.map((m) => m.messageId).join(),
+    messages.map((m) => m.id).join(),
   );
 
   static _ViewModel fromStore(Store<AppState> store, String roomId) {
@@ -303,7 +303,7 @@ class _ViewModel {
     
     return _ViewModel(
       isLoading: chatState.isLoading,
-      messages: List.of(messages)..sort((a, b) => b.sentAt.compareTo(a.sentAt)),
+      messages: List.of(messages)..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
       hasMore: chatState.hasMoreMessages[roomId] ?? true,
       myUserId: store.state.userState.user?.id.toString(),
       error: chatState.error,

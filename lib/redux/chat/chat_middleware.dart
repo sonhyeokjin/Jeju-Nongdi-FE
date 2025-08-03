@@ -111,7 +111,7 @@ _sendMessage(ChatService service, WebSocketService webSocketService) {
       );
       
       result.onSuccess((message) {
-        print('✅ HTTP API 메시지 전송 성공: ${message.messageId}');
+        print('✅ HTTP API 메시지 전송 성공: ${message.id}');
         store.dispatch(ReceiveMessageAction(message));
         store.dispatch(SetChatLoadingAction(false));
       }).onFailure((error) {
@@ -174,7 +174,7 @@ _connectWebSocket(WebSocketService webSocketService) {
       store.dispatch(ConnectWebSocketSuccessAction());
       // WebSocket 메시지 스트림 리스닝 시작 (중복 방지)
       _webSocketStreamSubscription = webSocketService.messageStream.listen((message) {
-        print('📨 WebSocket 메시지 수신: roomId=${message.roomId}, messageId=${message.messageId}, content=${message.content}');
+        print('📨 WebSocket 메시지 수신: roomId=${message.roomId}, messageId=${message.id}, content=${message.content}');
         store.dispatch(ReceiveMessageAction(message));
       });
       print('👂 WebSocket 메시지 스트림 리스너 등록 완료');

@@ -7,7 +7,12 @@ import 'package:jejunongdi/core/network/api_client.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
 import 'package:jejunongdi/core/services/chat_service.dart';
 import 'package:jejunongdi/core/config/environment.dart';
-import 'package:stomp_dart_client/stomp_dart_client.dart';
+import 'package:jejunongdi/redux/app_state.dart';
+import 'package:redux/redux.dart';
+import 'package:stomp_dart_client/stomp.dart';
+import 'package:stomp_dart_client/stomp_config.dart';
+import 'package:stomp_dart_client/stomp_frame.dart';
+import 'package:stomp_dart_client/stomp_handler.dart';
 
 class WebSocketService {
   static WebSocketService? _instance;
@@ -21,6 +26,9 @@ class WebSocketService {
   String? _authToken;
   WebSocketConnectionInfo? _wsInfo;
   StompUnsubscribe? _currentRoomSubscription;
+  
+  // Redux Store 인스턴스
+  Store<AppState>? _store;
 
   static WebSocketService get instance {
     _instance ??= WebSocketService._internal();
@@ -28,6 +36,19 @@ class WebSocketService {
   }
 
   WebSocketService._internal();
+
+  /// Redux Store 설정 (앱 초기화 시 호출)
+  void setStore(Store<AppState> store) {
+    _store = store;
+    Logger.info('WebSocketService에 Redux Store 설정 완료');
+  }
+
+  /// 현재 로그인한 사용자의 이메일 조회
+  String? get currentUserEmail {
+    if (_store == null) return null;
+    final userState = _store!.state.userState;
+    return userState.user?.email;
+  }
 
   Stream<MessageDto> get messageStream => _messageController.stream;
   bool get isConnected => _isConnected;
@@ -199,7 +220,7 @@ class WebSocketService {
             if (frame.body != null) {
               final messageData = json.decode(frame.body!);
               final message = MessageDto.fromJson(messageData);
-              print('📨 메시지 파싱 성공, 스트림에 추가: ${message.messageId}');
+              print('📨 메시지 파싱 성공, 스트림에 추가: ${message.id}');
               _messageController.add(message);
             }
           } catch (e) {
@@ -235,7 +256,7 @@ class WebSocketService {
     return true;
   }
 
-  /// 메시지 전송
+  /// 메시지 전송 (Redux에서 사용자 이메일 자동 포함)
   Future<bool> sendMessage({
     required String roomId,
     required String content,
@@ -253,15 +274,26 @@ class WebSocketService {
     }
 
     try {
+      // Redux Store에서 현재 사용자 이메일 조회
+      final userEmail = currentUserEmail;
+      if (userEmail == null) {
+        print('❌ 사용자 이메일을 Redux에서 찾을 수 없습니다');
+        Logger.error('사용자 인증 정보가 없습니다.');
+        return false;
+      }
+
+      // 메시지 데이터에 이메일 포함
       final messageData = {
         'roomId': roomId,
         'content': content,
         'messageType': messageType,
+        'email': userEmail, // Redux에서 가져온 이메일 추가
       };
 
       final destination = _wsInfo!.sendDestination ?? '/app/chat.sendPrivateMessage';
       print('🎯 전송 목적지: $destination');
       print('📦 전송 데이터: $messageData');
+      print('👤 발신자 이메일: $userEmail');
 
       _stompClient!.send(
         destination: destination,

@@ -46,12 +46,12 @@ ChatState _loadChatMessagesSuccess(ChatState state, LoadChatMessagesSuccessActio
   final existingMessages = newMessages[action.roomId] ?? [];
 
   // 중복을 제외한 새 메시지만 필터링
-  final existingMessageIds = existingMessages.map((m) => m.messageId).toSet();
-  final uniqueNewMessages = action.messages.where((m) => !existingMessageIds.contains(m.messageId));
+  final existingMessageIds = existingMessages.map((m) => m.id).toSet();
+  final uniqueNewMessages = action.messages.where((m) => !existingMessageIds.contains(m.id));
 
   // 기존 메시지와 새로운 메시지를 합치고 시간 역순으로 정렬 (최신 메시지가 위로)
   final allMessages = [...existingMessages, ...uniqueNewMessages];
-  allMessages.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+  allMessages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
   newMessages[action.roomId] = allMessages;
 
@@ -70,7 +70,7 @@ ChatState _loadChatMessagesSuccess(ChatState state, LoadChatMessagesSuccessActio
 }
 
 ChatState _receiveMessage(ChatState state, ReceiveMessageAction action) {
-  print('📥 ReceiveMessageAction 처리: roomId=${action.message.roomId}, messageId=${action.message.messageId}, content=${action.message.content}');
+  print('📥 ReceiveMessageAction 처리: roomId=${action.message.roomId}, messageId=${action.message.id}, content=${action.message.content}');
   
   final newMessages = Map<String, List<MessageDto>>.from(state.messages);
   final roomMessages = newMessages[action.message.roomId] ?? [];
@@ -79,16 +79,16 @@ ChatState _receiveMessage(ChatState state, ReceiveMessageAction action) {
 
   // 중복 방지: messageId와 content+sentAt 기반 중복 검사
   final messageExists = roomMessages.any((m) => 
-    m.messageId == action.message.messageId ||
+    m.id == action.message.id ||
     (m.content == action.message.content && 
-     m.sender.id == action.message.sender.id &&
-     m.sentAt.difference(action.message.sentAt).abs().inSeconds < 2) // 2초 이내 동일 메시지는 중복으로 간주
+     m.senderId.id == action.message.senderId.id &&
+     m.createdAt.difference(action.message.createdAt).abs().inSeconds < 2) // 2초 이내 동일 메시지는 중복으로 간주
   );
   
   if (!messageExists) {
     print('✅ 새 메시지 추가 중...');
     final updatedMessages = [action.message, ...roomMessages];
-    updatedMessages.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+    updatedMessages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     newMessages[action.message.roomId] = updatedMessages;
     print('📊 업데이트 후 메시지 개수: ${updatedMessages.length}');
   } else {

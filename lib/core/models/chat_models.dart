@@ -286,24 +286,28 @@ class ChatRoomView {
 // 메시지 DTO (API 명세의 MessageDto)
 @JsonSerializable()
 class MessageDto {
-  final String messageId;
+  final String id;
   final String roomId;
-  final UserResponse sender;
+  final UserResponse senderId;
+  final String email;
   final String content;
   final String? fileUrl;
   final String messageType;
-  final DateTime sentAt;
+  final DateTime createdAt;
   final bool isRead;
+  final String? senderProfileImage;
 
   MessageDto({
-    required this.messageId,
+    required this.id,
     required this.roomId,
-    required this.sender,
+    required this.senderId,
+    required this.email,
     required this.content,
     this.fileUrl,
     required this.messageType,
-    required this.sentAt,
+    required this.createdAt,
     this.isRead = false,
+    this.senderProfileImage,
   });
 
   factory MessageDto.fromJson(Map<String, dynamic> json) =>
