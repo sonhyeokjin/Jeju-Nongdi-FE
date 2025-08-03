@@ -33,8 +33,8 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
   final _contactPhoneController = TextEditingController();
 
   // 주소 관련 변수
-  double _latitude = 33.0;  // 기본값
-  double _longitude = 126.0;  // 기본값
+  double _latitude = 33.5;  // 제주도 중심 기본값
+  double _longitude = 126.5;  // 제주도 중심 기본값
   String _postCode = '';  // 우편번호
 
   // Dropdown & Date Values
@@ -80,7 +80,7 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
         address: _addressController.text,  // 직접 TextEditingController에서 가져옴
         wages: int.parse(_wagesController.text),
         recruitmentCount: int.parse(_recruitmentCountController.text),
-        description: _descriptionController.text,
+        description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
         cropType: _cropType!,
         workType: _workType!,
         wageType: _wageType!,
@@ -92,6 +92,25 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
             ? _contactPhoneController.text
             : null,
       );
+
+      // 🔍 디버그: 전송할 데이터 확인
+      print('🚀 === 공고 등록 요청 데이터 ===');
+      print('📄 JSON: ${request.toJson()}');
+      print('📋 제목: ${request.title}');
+      print('🏠 농장명: ${request.farmName}');
+      print('📍 주소: ${request.address}');
+      print('💰 급여: ${request.wages}');
+      print('👥 모집인원: ${request.recruitmentCount}');
+      print('📝 설명: ${request.description}');
+      print('🌾 작물종류: ${request.cropType}');
+      print('⚒️ 작업종류: ${request.workType}');
+      print('💵 급여종류: ${request.wageType}');
+      print('📅 시작일: ${request.workStartDate}');
+      print('📅 종료일: ${request.workEndDate}');
+      print('🌍 위도: ${request.latitude}');
+      print('🌍 경도: ${request.longitude}');
+      print('📞 연락처: ${request.contactPhone}');
+      print('============================');
 
       final result = await JobPostingService.instance.createJobPosting(request);
 
@@ -345,12 +364,22 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
     return Row(
       children: [
         Expanded(
-          child: TextFormField(
-            controller: _addressController,
-            readOnly: true,
-            decoration: _getStyledInputDecoration('주소', _addressController.text.isEmpty ? '탭하여 주소 검색' : null, FontAwesomeIcons.mapLocationDot),
-            validator: (value) => value == null || value.isEmpty ? '주소를 선택해주세요.' : null,
-            onTap: () => _openKpostalView(),
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _addressController,
+            builder: (context, value, child) {
+              print('🔄 주소 필드 업데이트: "${value.text}"');
+              return TextFormField(
+                controller: _addressController,
+                readOnly: true,
+                decoration: _getStyledInputDecoration(
+                  '주소', 
+                  _addressController.text.isEmpty ? '탭하여 주소 검색' : null, 
+                  FontAwesomeIcons.mapLocationDot
+                ),
+                validator: (value) => value == null || value.isEmpty ? '주소를 선택해주세요.' : null,
+                onTap: () => _openKpostalView(),
+              );
+            },
           ),
         ),
         const SizedBox(width: 8),
@@ -370,33 +399,51 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
     );
   }
 
-  void _openKpostalView() {
-    print('=== 주소 검색 시작 ===');
+  void _openKpostalView() async {
+    print('🔍 === 주소 검색 시작 ===');
+    print('🔑 Kakao Key: ${EnvironmentConfig.kakaoJavascriptKey}');
+    print('📱 현재 context가 mounted: $mounted');
     
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => KpostalView(
-          title: '주소 검색',
-          useLocalServer: false, // 서버 없이 직접 카카오 API 사용
-          kakaoKey: EnvironmentConfig.kakaoJavascriptKey,
-          callback: (Kpostal result) {
-            print('=== 콜백 함수 실행됨 ===');
-            print('선택된 주소: ${result.address}');
-            print('우편번호: ${result.postCode}');
-            print('위도: ${result.latitude}');
-            print('경도: ${result.longitude}');
-            
-            // 화면 닫기
-            Navigator.of(context).pop();
-            
-            // addPostFrameCallback 사용하여 안전하게 상태 업데이트
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: const Text('주소 검색'),
+            backgroundColor: const Color(0xFFF2711C),
+            foregroundColor: Colors.white,
+          ),
+          body: KpostalView(
+            callback: (Kpostal result) {
+              print('🎯 === 콜백 함수 실행됨 ===');
+              print('📍 선택된 주소: ${result.address}');
+              print('📮 우편번호: ${result.postCode}');
+              print('🌍 위도: ${result.latitude}');
+              print('🌍 경도: ${result.longitude}');
+              print('📱 콜백 시점 mounted: $mounted');
+              
+              // ✅ KPostal이 자동으로 화면을 닫으므로 Navigator.pop() 제거
+              // ✅ 단순하게 setState만 호출 (예제 코드 방식)
               if (mounted) {
+                print('🔄 상태 업데이트 시도...');
                 setState(() {
                   _addressController.text = result.address;
-                  _latitude = result.latitude ?? 33.0;
-                  _longitude = result.longitude ?? 126.0;
+                  
+                  // 🌍 제주도 범위 내 좌표인지 검증 및 조정
+                  double lat = result.latitude ?? 33.5;
+                  double lng = result.longitude ?? 126.5;
+                  
+                  // API 문서 제약 조건: 위도 33.0-34.0, 경도 126.0-127.0
+                  if (lat < 33.0) lat = 33.0;
+                  if (lat > 34.0) lat = 34.0;
+                  if (lng < 126.0) lng = 126.0;
+                  if (lng > 127.0) lng = 127.0;
+                  
+                  _latitude = lat;
+                  _longitude = lng;
                   _postCode = result.postCode;
+                  
+                  print('📝 주소 컨트롤러 업데이트: ${_addressController.text}');
+                  print('🌍 조정된 좌표: 위도=$_latitude, 경도=$_longitude');
                 });
                 
                 // 성공 알림
@@ -407,14 +454,20 @@ class _JobPostingCreateScreenState extends State<JobPostingCreateScreen>
                     duration: const Duration(seconds: 2),
                   ),
                 );
+                print('✅ 상태 업데이트 완료');
+              } else {
+                print('❌ mounted가 false - 위젯이 이미 dispose됨');
               }
-            });
-            
-            print('=== 주소 입력 완료 ===');
-          },
+              
+              print('🏁 === 주소 입력 처리 완료 ===');
+            },
+          ),
         ),
       ),
     );
+    
+    print('🔚 주소 검색 화면에서 돌아옴');
+    print('📝 현재 주소 컨트롤러 값: ${_addressController.text}');
   }
 
 

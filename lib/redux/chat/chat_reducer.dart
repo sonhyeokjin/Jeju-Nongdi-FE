@@ -13,8 +13,6 @@ final chatReducer = combineReducers<ChatState>([
   TypedReducer<ChatState, ReceiveMessageAction>(_receiveMessage),
   TypedReducer<ChatState, GetOrCreateOneToOneRoomSuccessAction>(_getOrCreateOneToOneRoomSuccess),
   TypedReducer<ChatState, DeleteChatRoomSuccessAction>(_deleteChatRoomSuccess),
-  TypedReducer<ChatState, CreateDummyChatRoomsSuccessAction>(_createDummyChatRoomsSuccess),
-  TypedReducer<ChatState, CreateDummyMessagesSuccessAction>(_createDummyMessagesSuccess),
 ]);
 
 ChatState _setLoading(ChatState state, SetChatLoadingAction action) {
@@ -34,33 +32,27 @@ ChatState _loadChatRoomsSuccess(ChatState state, LoadChatRoomsSuccessAction acti
 }
 
 ChatState _loadChatMessages(ChatState state, LoadChatMessagesAction action) {
-  if (action.refresh) {
-    final newMessages = Map<String, List<MessageDto>>.from(state.messages)..remove(action.roomId);
-    final newCurrentPage = Map<String, int>.from(state.currentPage)..remove(action.roomId);
-    final newHasMoreMessages = Map<String, bool>.from(state.hasMoreMessages)..remove(action.roomId);
-    return state.copyWith(
-      isLoading: true,
-      messages: newMessages,
-      currentPage: newCurrentPage,
-      hasMoreMessages: newHasMoreMessages,
-      error: null,
-    );
-  }
-  return state.copyWith(isLoading: true, error: null);
+  return state.copyWith(
+    isLoading: true,
+    error: null,
+    messages: action.refresh ? (Map.from(state.messages)..remove(action.roomId)) : state.messages,
+    currentPage: action.refresh ? (Map.from(state.currentPage)..remove(action.roomId)) : state.currentPage,
+    hasMoreMessages: action.refresh ? (Map.from(state.hasMoreMessages)..remove(action.roomId)) : state.hasMoreMessages,
+  );
 }
 
 ChatState _loadChatMessagesSuccess(ChatState state, LoadChatMessagesSuccessAction action) {
   final newMessages = Map<String, List<MessageDto>>.from(state.messages);
   final existingMessages = newMessages[action.roomId] ?? [];
 
-  // 기존 메시지 목록에 새로운 메시지를 추가 (중복 방지)
-  final messageIds = existingMessages.map((m) => m.messageId).toSet();
-  final uniqueNewMessages = action.messages.where((m) => !messageIds.contains(m.messageId));
+  // 중복을 제외한 새 메시지만 필터링
+  final existingMessageIds = existingMessages.map((m) => m.messageId).toSet();
+  final uniqueNewMessages = action.messages.where((m) => !existingMessageIds.contains(m.messageId));
 
-  // 시간순으로 정렬 (최신 메시지가 앞에 오도록)
-  final allMessages = [...uniqueNewMessages, ...existingMessages];
+  // 기존 메시지와 새로운 메시지를 합치고 시간 역순으로 정렬 (최신 메시지가 위로)
+  final allMessages = [...existingMessages, ...uniqueNewMessages];
   allMessages.sort((a, b) => b.sentAt.compareTo(a.sentAt));
-  
+
   newMessages[action.roomId] = allMessages;
 
   final newCurrentPage = Map<String, int>.from(state.currentPage);
@@ -78,14 +70,29 @@ ChatState _loadChatMessagesSuccess(ChatState state, LoadChatMessagesSuccessActio
 }
 
 ChatState _receiveMessage(ChatState state, ReceiveMessageAction action) {
+  print('📥 ReceiveMessageAction 처리: roomId=${action.message.roomId}, messageId=${action.message.messageId}, content=${action.message.content}');
+  
   final newMessages = Map<String, List<MessageDto>>.from(state.messages);
   final roomMessages = newMessages[action.message.roomId] ?? [];
 
-  // 중복 방지
-  final messageExists = roomMessages.any((m) => m.messageId == action.message.messageId);
+  print('📊 현재 채팅방 메시지 개수: ${roomMessages.length}');
+
+  // 중복 방지: messageId와 content+sentAt 기반 중복 검사
+  final messageExists = roomMessages.any((m) => 
+    m.messageId == action.message.messageId ||
+    (m.content == action.message.content && 
+     m.sender.id == action.message.sender.id &&
+     m.sentAt.difference(action.message.sentAt).abs().inSeconds < 2) // 2초 이내 동일 메시지는 중복으로 간주
+  );
+  
   if (!messageExists) {
-    // 새 메시지를 맨 앞에 추가
-    newMessages[action.message.roomId] = [action.message, ...roomMessages];
+    print('✅ 새 메시지 추가 중...');
+    final updatedMessages = [action.message, ...roomMessages];
+    updatedMessages.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+    newMessages[action.message.roomId] = updatedMessages;
+    print('📊 업데이트 후 메시지 개수: ${updatedMessages.length}');
+  } else {
+    print('⚠️ 중복 메시지로 인해 추가하지 않음');
   }
 
   return state.copyWith(messages: newMessages);
@@ -134,38 +141,5 @@ ChatState _deleteChatRoomSuccess(ChatState state, DeleteChatRoomSuccessAction ac
     messages: newMessages,
     currentPage: newCurrentPage,
     hasMoreMessages: newHasMoreMessages,
-  );
-}
-
-ChatState _createDummyChatRoomsSuccess(ChatState state, CreateDummyChatRoomsSuccessAction action) {
-  // 기존 채팅방과 더미 채팅방을 합치되, 중복 제거
-  final existingRoomIds = state.chatRooms.map((room) => room.roomId).toSet();
-  final uniqueDummyRooms = action.dummyChatRooms.where((room) => !existingRoomIds.contains(room.roomId)).toList();
-  final allChatRooms = [...state.chatRooms, ...uniqueDummyRooms];
-  
-  return state.copyWith(
-    isLoading: false,
-    chatRooms: allChatRooms,
-    error: null,
-  );
-}
-
-ChatState _createDummyMessagesSuccess(ChatState state, CreateDummyMessagesSuccessAction action) {
-  final newMessages = Map<String, List<MessageDto>>.from(state.messages);
-  newMessages[action.roomId] = action.dummyMessages;
-  
-  // 해당 채팅방에 대한 페이징 정보도 설정
-  final newCurrentPage = Map<String, int>.from(state.currentPage);
-  newCurrentPage[action.roomId] = 0;
-  
-  final newHasMoreMessages = Map<String, bool>.from(state.hasMoreMessages);
-  newHasMoreMessages[action.roomId] = false; // 더미 데이터는 페이징 없음
-  
-  return state.copyWith(
-    isLoading: false,
-    messages: newMessages,
-    currentPage: newCurrentPage,
-    hasMoreMessages: newHasMoreMessages,
-    error: null,
   );
 }

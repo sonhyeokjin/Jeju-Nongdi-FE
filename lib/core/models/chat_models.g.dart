@@ -89,8 +89,10 @@ WebSocketConnectionInfo _$WebSocketConnectionInfoFromJson(
 ) => WebSocketConnectionInfo(
   endpoint: json['endpoint'] as String,
   protocol: json['protocol'] as String,
-  authenticationMethod: json['authenticationMethod'] as String?,
-  additionalParams: json['additionalParams'] as Map<String, dynamic>?,
+  authentication: json['authentication'] as String?,
+  sendDestination: json['sendDestination'] as String?,
+  subscribePattern: json['subscribePattern'] as String?,
+  sockJsEnabled: json['sockJsEnabled'] as bool?,
 );
 
 Map<String, dynamic> _$WebSocketConnectionInfoToJson(
@@ -98,8 +100,31 @@ Map<String, dynamic> _$WebSocketConnectionInfoToJson(
 ) => <String, dynamic>{
   'endpoint': instance.endpoint,
   'protocol': instance.protocol,
-  'authenticationMethod': instance.authenticationMethod,
-  'additionalParams': instance.additionalParams,
+  'authentication': instance.authentication,
+  'sendDestination': instance.sendDestination,
+  'subscribePattern': instance.subscribePattern,
+  'sockJsEnabled': instance.sockJsEnabled,
+};
+
+OneToOneChatRoomDto _$OneToOneChatRoomDtoFromJson(Map<String, dynamic> json) =>
+    OneToOneChatRoomDto(
+      roomId: json['roomId'] as String,
+      user1Id: (json['user1Id'] as num).toInt(),
+      user2Id: (json['user2Id'] as num).toInt(),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      otherUserNickname: json['otherUserNickname'] as String,
+      otherUserProfileImage: json['otherUserProfileImage'] as String?,
+    );
+
+Map<String, dynamic> _$OneToOneChatRoomDtoToJson(
+  OneToOneChatRoomDto instance,
+) => <String, dynamic>{
+  'roomId': instance.roomId,
+  'user1Id': instance.user1Id,
+  'user2Id': instance.user2Id,
+  'createdAt': instance.createdAt.toIso8601String(),
+  'otherUserNickname': instance.otherUserNickname,
+  'otherUserProfileImage': instance.otherUserProfileImage,
 };
 
 ChatRoomDto _$ChatRoomDtoFromJson(Map<String, dynamic> json) => ChatRoomDto(
@@ -144,7 +169,7 @@ ChatRoomView _$ChatRoomViewFromJson(Map<String, dynamic> json) => ChatRoomView(
       ? null
       : DateTime.parse(json['lastMessageTime'] as String),
   unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
-  chatType: json['chatType'] as String,
+  chatType: json['chatType'] as String? ?? 'GENERAL',
 );
 
 Map<String, dynamic> _$ChatRoomViewToJson(ChatRoomView instance) =>

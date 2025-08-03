@@ -6,7 +6,7 @@ import 'package:jejunongdi/core/models/chat_models.dart';
 import 'package:jejunongdi/core/models/mentoring_models.dart';
 import 'package:jejunongdi/redux/app_state.dart';
 import 'package:jejunongdi/redux/chat/chat_actions.dart';
-import 'package:jejunongdi/core/services/chat_service.dart';
+import 'package:jejunongdi/core/services/websocket_service.dart';
 import 'package:redux/redux.dart';
 
 class ChatRoomScreen extends StatefulWidget {
@@ -26,39 +26,26 @@ class ChatRoomScreen extends StatefulWidget {
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  late final Store<AppState> _store;
 
   @override
   void initState() {
     super.initState();
-    print('ChatRoomScreen initiated with roomId: ${widget.roomId}');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('Dispatching LoadChatMessagesAction for roomId: ${widget.roomId}');
-      final store = StoreProvider.of<AppState>(context, listen: false);
-      
-      // 더미 룸인 경우 더미 메시지 생성
-      if (widget.roomId.startsWith('dummy-room-')) {
-        store.dispatch(CreateDummyMessagesAction(widget.roomId));
-      } else {
-        store.dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
-      }
-    });
+    _store = StoreProvider.of<AppState>(context, listen: false);
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
-        // 더미 룸이 아닌 경우에만 추가 메시지 로드
-        if (!widget.roomId.startsWith('dummy-room-')) {
-          StoreProvider.of<AppState>(context, listen: false)
-              .dispatch(LoadChatMessagesAction(widget.roomId));
-        }
+        _store.dispatch(LoadChatMessagesAction(widget.roomId));
       }
     });
-
-    // 메시지 로드 후 별도 처리 없음 (새 API에서는 입장/읽음 처리 불필요)
   }
 
   @override
   void dispose() {
+    // 채팅방 퇴장 및 연결 해제
+    _store.dispatch(LeaveChatRoomAction(widget.roomId));
+    _store.dispatch(DisconnectWebSocketAction());
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -66,62 +53,29 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
-    
-    final store = StoreProvider.of<AppState>(context, listen: false);
+
     final content = _messageController.text.trim();
+    print('💬 === 메시지 전송 시작 ===');
+    print('💬 UI에서 메시지 전송 시도: "$content"');
+    print('🏠 채팅방 ID: ${widget.roomId}');
     
-    // 더미 룸인 경우 더미 메시지로 처리
-    if (widget.roomId.startsWith('dummy-room-')) {
-      // 더미 메시지 생성 (내가 보낸 메시지)
-      final myUser = UserResponse(
-        id: 999,
-        name: '나',
-        email: 'me@jejunongdi.com',
-        profileImageUrl: null,
-      );
-      
-      final dummyMessage = MessageDto(
-        messageId: 'dummy-msg-${DateTime.now().millisecondsSinceEpoch}',
-        roomId: widget.roomId,
-        sender: myUser,
-        content: content,
-        messageType: 'TEXT',
-        sentAt: DateTime.now(),
-        isRead: false,
-      );
-      
-      store.dispatch(ReceiveMessageAction(dummyMessage));
-      
-      // 자동 응답 메시지 (3초 후)
-      Future.delayed(const Duration(seconds: 3), () {
-        final otherUser = UserResponse(
-          id: 1,
-          name: '감귤농장 김씨',
-          email: 'farmer1@jejunongdi.com',
-          profileImageUrl: null,
-        );
-        
-        final autoReplyMessage = MessageDto(
-          messageId: 'dummy-reply-${DateTime.now().millisecondsSinceEpoch}',
-          roomId: widget.roomId,
-          sender: otherUser,
-          content: '메시지 확인했습니다! 더미 채팅방에서 테스트 중입니다 😊',
-          messageType: 'TEXT',
-          sentAt: DateTime.now(),
-          isRead: false,
-        );
-        
-        if (mounted) {
-          store.dispatch(ReceiveMessageAction(autoReplyMessage));
-        }
-      });
-    } else {
-      // 실제 API 호출
-      final request = ChatMessageRequest(content: content);
-      store.dispatch(SendMessageAction(widget.roomId, request));
-    }
-    
+    final request = ChatMessageRequest(content: content);
+    _store.dispatch(SendMessageAction(widget.roomId, request));
+
     _messageController.clear();
+    print('💬 === 메시지 전송 UI 작업 완료 ===');
+
+    // 다음 프레임이 렌더링된 후 스크롤을 맨 아래로 이동
+    // 위젯 트리가 재구성되는 동안 컨트롤러가 분리될 수 있는 문제를 방지
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
@@ -133,60 +87,55 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         backgroundColor: Colors.white,
         elevation: 1.0,
       ),
-      body: StoreConnector<AppState, _ViewModel>(
-        converter: (store) => _ViewModel.fromStore(store, widget.roomId),
-        builder: (context, vm) {
-          // 에러 상태일 때 사용자에게 명확한 피드백 제공
-          if (vm.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '오류가 발생했습니다',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${vm.error}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      StoreProvider.of<AppState>(context, listen: false)
-                          .dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF2711C),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('다시 시도'),
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          return Column(
-            children: [
-              Expanded(
-                child: vm.isLoading && vm.messages.isEmpty
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView.builder(
+      body: Column(
+        children: [
+          Expanded(
+            child: StoreConnector<AppState, _ViewModel>(
+              onInit: (store) async {
+                print('🏠 채팅방 화면 초기화: roomId=${widget.roomId}');
+                
+                // 1. 먼저 WebSocket 연결
+                store.dispatch(ConnectWebSocketAction());
+                
+                // 2. WebSocket 연결 완료를 기다린 후 채팅방 입장
+                // 연결 상태를 확인하는 로직 추가
+                final webSocketService = WebSocketService.instance;
+                int attempts = 0;
+                const maxAttempts = 30; // 3초 대기
+                
+                while (!webSocketService.isConnected && attempts < maxAttempts) {
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  attempts++;
+                }
+                
+                if (webSocketService.isConnected) {
+                  print('✅ WebSocket 연결 완료, 채팅방 입장 시도');
+                  print('🚀 JoinChatRoomAction 디스패치 시작: roomId=${widget.roomId}');
+                  store.dispatch(JoinChatRoomAction(widget.roomId));
+                  print('✅ JoinChatRoomAction 디스패치 완료');
+                  
+                  // 채팅방 입장 완료를 추가로 기다림
+                  await Future.delayed(const Duration(milliseconds: 500));
+                  print('🔔 채팅방 입장 처리 완료 대기 완료');
+                } else {
+                  print('❌ WebSocket 연결 실패, HTTP API로 폴백');
+                }
+                
+                // 3. 메시지 로드 (WebSocket 연결과 독립적으로 실행)
+                store.dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
+              },
+              converter: (store) => _ViewModel.fromStore(store, widget.roomId),
+              distinct: true,
+              builder: (context, vm) {
+                if (vm.isLoading && vm.messages.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (vm.error != null) {
+                  return Center(child: Text('오류: ${vm.error}'));
+                }
+
+                return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
                   padding: const EdgeInsets.all(16),
@@ -202,12 +151,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     final isMe = vm.myUserId != null && message.sender.id.toString() == vm.myUserId;
                     return _MessageBubble(message: message, isMe: isMe);
                   },
-                ),
-              ),
-              _buildMessageComposer(),
-            ],
-          );
-        },
+                );
+              },
+            ),
+          ),
+          _buildMessageComposer(),
+        ],
       ),
     );
   }
@@ -307,11 +256,54 @@ class _ViewModel {
     this.error,
   });
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! _ViewModel) return false;
+    
+    // 메시지 리스트의 내용이 같은지 확인
+    if (messages.length != other.messages.length) {
+      print('🔍 _ViewModel 비교: 메시지 개수 다름 (${messages.length} vs ${other.messages.length})');
+      return false;
+    }
+    
+    for (int i = 0; i < messages.length; i++) {
+      if (messages[i].messageId != other.messages[i].messageId) {
+        print('🔍 _ViewModel 비교: 메시지 ID 다름');
+        return false;
+      }
+    }
+    
+    final isEqual = isLoading == other.isLoading &&
+        hasMore == other.hasMore &&
+        myUserId == other.myUserId &&
+        error == other.error;
+        
+    print('🔍 _ViewModel 비교 결과: $isEqual');
+    return isEqual;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    isLoading,
+    hasMore,
+    myUserId,
+    error,
+    messages.map((m) => m.messageId).join(),
+  );
+
   static _ViewModel fromStore(Store<AppState> store, String roomId) {
     final chatState = store.state.chatState;
+    final messages = chatState.messages[roomId] ?? [];
+    
+    print('🔄 ChatRoomScreen _ViewModel 업데이트: roomId=$roomId, 메시지 개수=${messages.length}');
+    if (messages.isNotEmpty) {
+      print('📋 최신 메시지: ${messages.first.content}');
+    }
+    
     return _ViewModel(
       isLoading: chatState.isLoading,
-      messages: (chatState.messages[roomId] ?? [])..sort((a,b) => b.sentAt.compareTo(a.sentAt)),
+      messages: List.of(messages)..sort((a, b) => b.sentAt.compareTo(a.sentAt)),
       hasMore: chatState.hasMoreMessages[roomId] ?? true,
       myUserId: store.state.userState.user?.id.toString(),
       error: chatState.error,
