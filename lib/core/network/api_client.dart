@@ -255,6 +255,16 @@ class ApiClient {
     }
   }
   
+  // 토큰 가져오기
+  Future<String?> getToken() async {
+    try {
+      return await _secureStorage.read(key: 'access_token');
+    } catch (e) {
+      Logger.error('Failed to get token', error: e);
+      return null;
+    }
+  }
+  
   // Dio 인스턴스 직접 접근 (필요한 경우)
   Dio get dio => _dio;
 }

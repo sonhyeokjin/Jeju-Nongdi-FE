@@ -24,7 +24,11 @@ class ChatService {
       final response = await _apiClient.get<Map<String, dynamic>>('/api/chat/websocket-info');
 
       if (response.data != null) {
-        final wsInfo = WebSocketConnectionInfo.fromJson(response.data!);
+        // API 응답에서 실제 데이터 부분 추출
+        final responseData = response.data!;
+        final actualData = responseData['data'] as Map<String, dynamic>;
+        
+        final wsInfo = WebSocketConnectionInfo.fromJson(actualData);
         Logger.info('WebSocket 연결 정보 조회 성공');
         return ApiResult.success(wsInfo);
       } else {
@@ -40,12 +44,56 @@ class ChatService {
   Future<ApiResult<List<ChatRoomView>>> getChatRooms() async {
     try {
       Logger.info('채팅방 목록 조회 시도');
-      final response = await _apiClient.get<List<dynamic>>('/api/chat/rooms');
+      final response = await _apiClient.get<Map<String, dynamic>>('/api/chat/rooms');
 
       if (response.data != null) {
-        final chatRooms = response.data!
-            .map((item) => ChatRoomView.fromJson(item as Map<String, dynamic>))
-            .toList();
+        // API 응답 구조 확인 후 적절히 처리
+        final responseData = response.data!;
+        print('📊 채팅방 목록 API 응답: $responseData');
+        
+        List<dynamic>? roomsData;
+        
+        if (responseData.containsKey('data')) {
+          // 래핑된 구조인 경우
+          final data = responseData['data'];
+          if (data is List) {
+            roomsData = data;
+          } else {
+            print('❌ data 필드가 List가 아님: ${data.runtimeType}');
+            Logger.error('data 필드가 List 타입이 아닙니다: ${data.runtimeType}');
+            return ApiResult.failure(const UnknownException('올바르지 않은 응답 형식입니다.'));
+          }
+        } else {
+          // 직접 리스트인 경우
+          if (response.data is List) {
+            roomsData = response.data as List<dynamic>;
+          } else {
+            print('❌ 응답 데이터가 List가 아님: ${response.data.runtimeType}');
+            Logger.error('응답 데이터가 List 타입이 아닙니다: ${response.data.runtimeType}');
+            return ApiResult.failure(const UnknownException('올바르지 않은 응답 형식입니다.'));
+          }
+        }
+        
+        if (roomsData == null) {
+          Logger.info('채팅방 목록이 비어있습니다.');
+          return ApiResult.success([]);
+        }
+        
+        final chatRooms = <ChatRoomView>[];
+        for (int i = 0; i < roomsData.length; i++) {
+          try {
+            final item = roomsData[i];
+            if (item is Map<String, dynamic>) {
+              chatRooms.add(ChatRoomView.fromJson(item));
+            } else {
+              print('❌ 채팅방 데이터[$i]가 Map이 아님: ${item.runtimeType}');
+              Logger.error('채팅방 데이터[$i]가 Map 타입이 아닙니다: ${item.runtimeType}');
+            }
+          } catch (e) {
+            print('❌ 채팅방 데이터[$i] 파싱 실패: $e');
+            Logger.error('채팅방 데이터[$i] 파싱 실패', error: e);
+          }
+        }
 
         Logger.info('채팅방 목록 조회 성공: ${chatRooms.length}개');
         return ApiResult.success(chatRooms);
@@ -64,14 +112,59 @@ class ChatService {
   }) async {
     try {
       Logger.info('채팅 메시지 목록 조회 시도: roomId=$roomId');
-      final response = await _apiClient.get<List<dynamic>>(
+      final response = await _apiClient.get<Map<String, dynamic>>(
         '/api/chat/rooms/$roomId/messages',
       );
 
       if (response.data != null) {
-        final messages = response.data!
-            .map((item) => MessageDto.fromJson(item as Map<String, dynamic>))
-            .toList();
+        // API 응답 구조 확인 후 적절히 처리
+        final responseData = response.data!;
+        print('📊 채팅 메시지 API 응답: $responseData');
+        
+        List<dynamic>? messagesData;
+        
+        if (responseData.containsKey('data')) {
+          // 래핑된 구조인 경우
+          final data = responseData['data'];
+          if (data is List) {
+            messagesData = data;
+          } else {
+            print('❌ 메시지 data 필드가 List가 아님: ${data.runtimeType}');
+            Logger.error('메시지 data 필드가 List 타입이 아닙니다: ${data.runtimeType}');
+            return ApiResult.failure(const UnknownException('올바르지 않은 메시지 응답 형식입니다.'));
+          }
+        } else {
+          // 직접 리스트인 경우
+          if (response.data is List) {
+            messagesData = response.data as List<dynamic>;
+          } else {
+            print('❌ 메시지 응답 데이터가 List가 아님: ${response.data.runtimeType}');
+            Logger.error('메시지 응답 데이터가 List 타입이 아닙니다: ${response.data.runtimeType}');
+            return ApiResult.failure(const UnknownException('올바르지 않은 메시지 응답 형식입니다.'));
+          }
+        }
+        
+        if (messagesData == null) {
+          Logger.info('메시지 목록이 비어있습니다.');
+          return ApiResult.success([]);
+        }
+        
+        final messages = <MessageDto>[];
+        for (int i = 0; i < messagesData.length; i++) {
+          try {
+            final item = messagesData[i];
+            if (item is Map<String, dynamic>) {
+              messages.add(MessageDto.fromJson(item));
+            } else {
+              print('❌ 메시지 데이터[$i]가 Map이 아님: ${item.runtimeType}');
+              Logger.error('메시지 데이터[$i]가 Map 타입이 아닙니다: ${item.runtimeType}');
+            }
+          } catch (e) {
+            print('❌ 메시지 데이터[$i] 파싱 실패: $e');
+            Logger.error('메시지 데이터[$i] 파싱 실패', error: e);
+          }
+        }
+        
         Logger.info('채팅 메시지 목록 조회 성공: ${messages.length}개');
         return ApiResult.success(messages);
       } else {
@@ -132,12 +225,47 @@ class ChatService {
 
       if (response.data != null) {
         try {
-          final chatRoom = ChatRoomDto.fromJson(response.data!);
+          // API 응답 구조 로깅
+          Logger.info('1:1 채팅방 API 응답: ${response.data}');
+          
+          // API 응답에서 실제 데이터 부분 추출
+          final responseData = response.data!;
+          final actualData = responseData['data'] as Map<String, dynamic>;
+          
+          // OneToOneChatRoomDto로 파싱
+          final oneToOneRoom = OneToOneChatRoomDto.fromJson(actualData);
+          
+          // ChatRoomDto로 변환 (앱에서 사용하는 형태)
+          final chatRoom = ChatRoomDto(
+            roomId: oneToOneRoom.roomId,
+            roomName: null, // 1:1 채팅방은 roomName이 없음
+            chatType: 'GENERAL', // 기본값
+            participants: [
+              // otherUser 정보를 UserResponse로 변환
+              UserResponse(
+                id: oneToOneRoom.user1Id, // 상대방 ID
+                name: oneToOneRoom.otherUserNickname,
+                profileImageUrl: oneToOneRoom.otherUserProfileImage,
+                email: targetEmail, // targetEmail 사용
+              ),
+            ],
+            lastMessage: null,
+            lastMessageTime: null,
+            unreadCount: 0,
+            createdAt: oneToOneRoom.createdAt,
+            updatedAt: null,
+          );
+          
           Logger.info('1:1 채팅방 조회/생성 성공: roomId=${chatRoom.roomId}');
           return ApiResult.success(chatRoom);
-        } catch (parseError) {
-          Logger.error('1:1 채팅방 응답 파싱 실패', error: parseError);
-          return ApiResult.failure(UnknownException('채팅방 응답 파싱 중 오류: $parseError'));
+        } catch (parseError, stackTrace) {
+          Logger.error(
+            '1:1 채팅방 응답 파싱 실패', 
+            error: parseError, 
+            stackTrace: stackTrace,
+          );
+          Logger.error('실제 응답 데이터: ${response.data}');
+          return ApiResult.failure(UnknownException('채팅방 정보를 받아오는 데 실패했습니다. 오류: $parseError'));
         }
       } else {
         return ApiResult.failure(const UnknownException('1:1 채팅방 조회/생성 응답이 없습니다.'));
@@ -173,7 +301,19 @@ class ChatService {
         data: request.toJson(),
       );
       if (response.data != null) {
-        final message = MessageDto.fromJson(response.data!);
+        // API 응답 구조 확인 후 적절히 처리
+        final responseData = response.data!;
+        Map<String, dynamic> messageData;
+        
+        if (responseData.containsKey('data')) {
+          // 래핑된 구조인 경우
+          messageData = responseData['data'] as Map<String, dynamic>;
+        } else {
+          // 직접 객체인 경우
+          messageData = response.data!;
+        }
+        
+        final message = MessageDto.fromJson(messageData);
         Logger.info('메시지 전송 성공');
         return ApiResult.success(message);
       } else {
@@ -182,277 +322,6 @@ class ChatService {
     } catch (e) {
       Logger.error('메시지 전송 실패', error: e);
       return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
-    }
-  }
-
-  /// 더미 채팅방 데이터 생성 (테스트용)
-  Future<ApiResult<List<ChatRoomView>>> createDummyChatRooms() async {
-    try {
-      Logger.info('더미 채팅방 데이터 생성 중...');
-      
-      // 더미 사용자 데이터
-      final dummyUsers = [
-        UserResponse(
-          id: 1,
-          name: '감귤농장 김씨',
-          email: 'farmer1@jejunongdi.com',
-          profileImageUrl: null,
-        ),
-        UserResponse(
-          id: 2,
-          name: '일손 박씨',
-          email: 'worker1@jejunongdi.com',
-          profileImageUrl: null,
-        ),
-        UserResponse(
-          id: 3,
-          name: '농업 전문가 이씨',
-          email: 'mentor1@jejunongdi.com',
-          profileImageUrl: null,
-        ),
-      ];
-
-      // 더미 채팅방 데이터
-      final dummyChatRooms = [
-        ChatRoomView(
-          roomId: 'dummy-room-1',
-          roomName: '감귤 수확 일자리 문의',
-          otherUser: dummyUsers[0],
-          lastMessage: '안녕하세요! 감귤 수확 일자리에 대해 문의드립니다.',
-          lastMessageTime: DateTime.now().subtract(const Duration(minutes: 30)),
-          unreadCount: 2,
-          chatType: 'JOB_POSTING',
-        ),
-        ChatRoomView(
-          roomId: 'dummy-room-2',
-          roomName: '농업 기술 상담',
-          otherUser: dummyUsers[2],
-          lastMessage: '토양 개선에 대한 조언 감사합니다!',
-          lastMessageTime: DateTime.now().subtract(const Duration(hours: 2)),
-          unreadCount: 0,
-          chatType: 'MENTORING',
-        ),
-        ChatRoomView(
-          roomId: 'dummy-room-3',
-          roomName: '유휴농지 임대 상담',
-          otherUser: dummyUsers[1],
-          lastMessage: '언제 현장 확인이 가능하신가요?',
-          lastMessageTime: DateTime.now().subtract(const Duration(hours: 5)),
-          unreadCount: 1,
-          chatType: 'FARMLAND',
-        ),
-      ];
-
-      Logger.info('더미 채팅방 ${dummyChatRooms.length}개 생성 완료');
-      return ApiResult.success(dummyChatRooms);
-      
-    } catch (e) {
-      Logger.error('더미 채팅방 생성 실패', error: e);
-      return ApiResult.failure(UnknownException(e.toString()));
-    }
-  }
-
-  /// 더미 메시지 데이터 생성 (테스트용)
-  Future<ApiResult<List<MessageDto>>> createDummyMessages(String roomId) async {
-    try {
-      Logger.info('더미 메시지 데이터 생성 중... roomId: $roomId');
-
-      // 더미 사용자 (나)
-      final myUser = UserResponse(
-        id: 999,
-        name: '나',
-        email: 'me@jejunongdi.com',
-        profileImageUrl: null,
-      );
-
-      // 더미 상대방
-      final otherUser = UserResponse(
-        id: 1,
-        name: '감귤농장 김씨',
-        email: 'farmer1@jejunongdi.com',
-        profileImageUrl: null,
-      );
-
-      // 채팅방별 더미 메시지
-      List<MessageDto> messages = [];
-      
-      switch (roomId) {
-        case 'dummy-room-1':
-          messages = [
-            MessageDto(
-              messageId: 'msg-1-1',
-              roomId: roomId,
-              sender: myUser,
-              content: '안녕하세요! 감귤 수확 일자리에 대해 문의드립니다.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 2)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-1-2',
-              roomId: roomId,
-              sender: otherUser,
-              content: '안녕하세요! 감귤 수확 일자리에 관심 가져주셔서 감사합니다.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 1, minutes: 50)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-1-3',
-              roomId: roomId,
-              sender: otherUser,
-              content: '12월 중순부터 1월 말까지 약 한 달 반 정도 일정입니다. 하루 8시간, 일당 12만원으로 생각하고 있어요.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 1, minutes: 45)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-1-4',
-              roomId: roomId,
-              sender: myUser,
-              content: '조건이 좋네요! 경험은 없는데 괜찮을까요?',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 1, minutes: 30)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-1-5',
-              roomId: roomId,
-              sender: otherUser,
-              content: '처음이시라도 괜찮습니다. 간단한 교육을 해드릴게요. 언제부터 시작 가능하신가요?',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(minutes: 30)),
-              isRead: false,
-            ),
-          ];
-          break;
-          
-        case 'dummy-room-2':
-          final mentorUser = UserResponse(
-            id: 3,
-            name: '농업 전문가 이씨',
-            email: 'mentor1@jejunongdi.com',
-            profileImageUrl: null,
-          );
-          
-          messages = [
-            MessageDto(
-              messageId: 'msg-2-1',
-              roomId: roomId,
-              sender: myUser,
-              content: '안녕하세요! 토양 개선에 대해 조언을 구하고 싶습니다.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(days: 1)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-2-2',
-              roomId: roomId,
-              sender: mentorUser,
-              content: '안녕하세요! 어떤 작물을 기르시는지, 현재 토양 상태는 어떤지 알려주세요.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 20)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-2-3',
-              roomId: roomId,
-              sender: myUser,
-              content: '감귤을 기르고 있는데, 최근 잎이 노랗게 변하고 있어요.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 18)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-2-4',
-              roomId: roomId,
-              sender: mentorUser,
-              content: '질소 부족이나 배수 문제일 가능성이 높습니다. 토양 pH 측정해보시고, 퇴비를 추가로 넣어보세요.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 2)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-2-5',
-              roomId: roomId,
-              sender: myUser,
-              content: '조언 감사합니다! 바로 시도해볼게요.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 2)),
-              isRead: true,
-            ),
-          ];
-          break;
-          
-        case 'dummy-room-3':
-          final landownerUser = UserResponse(
-            id: 2,
-            name: '일손 박씨',
-            email: 'worker1@jejunongdi.com',
-            profileImageUrl: null,
-          );
-          
-          messages = [
-            MessageDto(
-              messageId: 'msg-3-1',
-              roomId: roomId,
-              sender: myUser,
-              content: '안녕하세요! 올린 유휴농지에 관심이 있습니다.',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 10)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-3-2',
-              roomId: roomId,
-              sender: landownerUser,
-              content: '안녕하세요! 어떤 작물을 기를 계획이신가요?',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 8)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-3-3',
-              roomId: roomId,
-              sender: myUser,
-              content: '채소류를 생각하고 있습니다. 현장 확인이 가능할까요?',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 6)),
-              isRead: true,
-            ),
-            MessageDto(
-              messageId: 'msg-3-4',
-              roomId: roomId,
-              sender: landownerUser,
-              content: '언제 현장 확인이 가능하신가요?',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(hours: 5)),
-              isRead: false,
-            ),
-          ];
-          break;
-          
-        default:
-          // 기본 메시지
-          messages = [
-            MessageDto(
-              messageId: 'msg-default-1',
-              roomId: roomId,
-              sender: myUser,
-              content: '안녕하세요!',
-              messageType: 'TEXT',
-              sentAt: DateTime.now().subtract(const Duration(minutes: 10)),
-              isRead: true,
-            ),
-          ];
-      }
-
-      Logger.info('더미 메시지 ${messages.length}개 생성 완료');
-      return ApiResult.success(messages);
-      
-    } catch (e) {
-      Logger.error('더미 메시지 생성 실패', error: e);
-      return ApiResult.failure(UnknownException(e.toString()));
     }
   }
 }

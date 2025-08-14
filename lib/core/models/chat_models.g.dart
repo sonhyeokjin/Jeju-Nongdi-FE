@@ -89,8 +89,10 @@ WebSocketConnectionInfo _$WebSocketConnectionInfoFromJson(
 ) => WebSocketConnectionInfo(
   endpoint: json['endpoint'] as String,
   protocol: json['protocol'] as String,
-  authenticationMethod: json['authenticationMethod'] as String?,
-  additionalParams: json['additionalParams'] as Map<String, dynamic>?,
+  authentication: json['authentication'] as String?,
+  sendDestination: json['sendDestination'] as String?,
+  subscribePattern: json['subscribePattern'] as String?,
+  sockJsEnabled: json['sockJsEnabled'] as bool?,
 );
 
 Map<String, dynamic> _$WebSocketConnectionInfoToJson(
@@ -98,8 +100,31 @@ Map<String, dynamic> _$WebSocketConnectionInfoToJson(
 ) => <String, dynamic>{
   'endpoint': instance.endpoint,
   'protocol': instance.protocol,
-  'authenticationMethod': instance.authenticationMethod,
-  'additionalParams': instance.additionalParams,
+  'authentication': instance.authentication,
+  'sendDestination': instance.sendDestination,
+  'subscribePattern': instance.subscribePattern,
+  'sockJsEnabled': instance.sockJsEnabled,
+};
+
+OneToOneChatRoomDto _$OneToOneChatRoomDtoFromJson(Map<String, dynamic> json) =>
+    OneToOneChatRoomDto(
+      roomId: json['roomId'] as String,
+      user1Id: (json['user1Id'] as num).toInt(),
+      user2Id: (json['user2Id'] as num).toInt(),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      otherUserNickname: json['otherUserNickname'] as String,
+      otherUserProfileImage: json['otherUserProfileImage'] as String?,
+    );
+
+Map<String, dynamic> _$OneToOneChatRoomDtoToJson(
+  OneToOneChatRoomDto instance,
+) => <String, dynamic>{
+  'roomId': instance.roomId,
+  'user1Id': instance.user1Id,
+  'user2Id': instance.user2Id,
+  'createdAt': instance.createdAt.toIso8601String(),
+  'otherUserNickname': instance.otherUserNickname,
+  'otherUserProfileImage': instance.otherUserProfileImage,
 };
 
 ChatRoomDto _$ChatRoomDtoFromJson(Map<String, dynamic> json) => ChatRoomDto(
@@ -133,50 +158,29 @@ Map<String, dynamic> _$ChatRoomDtoToJson(ChatRoomDto instance) =>
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };
 
-ChatRoomView _$ChatRoomViewFromJson(Map<String, dynamic> json) => ChatRoomView(
-  roomId: json['roomId'] as String,
-  roomName: json['roomName'] as String?,
-  otherUser: json['otherUser'] == null
-      ? null
-      : UserResponse.fromJson(json['otherUser'] as Map<String, dynamic>),
-  lastMessage: json['lastMessage'] as String?,
-  lastMessageTime: json['lastMessageTime'] == null
-      ? null
-      : DateTime.parse(json['lastMessageTime'] as String),
-  unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
-  chatType: json['chatType'] as String,
-);
-
-Map<String, dynamic> _$ChatRoomViewToJson(ChatRoomView instance) =>
-    <String, dynamic>{
-      'roomId': instance.roomId,
-      'roomName': instance.roomName,
-      'otherUser': instance.otherUser,
-      'lastMessage': instance.lastMessage,
-      'lastMessageTime': instance.lastMessageTime?.toIso8601String(),
-      'unreadCount': instance.unreadCount,
-      'chatType': instance.chatType,
-    };
-
 MessageDto _$MessageDtoFromJson(Map<String, dynamic> json) => MessageDto(
-  messageId: json['messageId'] as String,
+  id: json['id'] as String,
   roomId: json['roomId'] as String,
-  sender: UserResponse.fromJson(json['sender'] as Map<String, dynamic>),
+  senderId: UserResponse.fromJson(json['senderId'] as Map<String, dynamic>),
+  email: json['email'] as String,
   content: json['content'] as String,
   fileUrl: json['fileUrl'] as String?,
   messageType: json['messageType'] as String,
-  sentAt: DateTime.parse(json['sentAt'] as String),
+  createdAt: DateTime.parse(json['createdAt'] as String),
   isRead: json['isRead'] as bool? ?? false,
+  senderProfileImage: json['senderProfileImage'] as String?,
 );
 
 Map<String, dynamic> _$MessageDtoToJson(MessageDto instance) =>
     <String, dynamic>{
-      'messageId': instance.messageId,
+      'id': instance.id,
       'roomId': instance.roomId,
-      'sender': instance.sender,
+      'senderId': instance.senderId,
+      'email': instance.email,
       'content': instance.content,
       'fileUrl': instance.fileUrl,
       'messageType': instance.messageType,
-      'sentAt': instance.sentAt.toIso8601String(),
+      'createdAt': instance.createdAt.toIso8601String(),
       'isRead': instance.isRead,
+      'senderProfileImage': instance.senderProfileImage,
     };
