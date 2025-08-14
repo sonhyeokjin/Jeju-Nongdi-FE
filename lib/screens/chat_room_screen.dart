@@ -117,12 +117,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   // 채팅방 입장 완료를 추가로 기다림
                   await Future.delayed(const Duration(milliseconds: 500));
                   print('🔔 채팅방 입장 처리 완료 대기 완료');
+                  
+                  // WebSocket 연결 후 메시지 로드
+                  store.dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
                 } else {
                   print('❌ WebSocket 연결 실패, HTTP API로 폴백');
+                  // WebSocket 연결 실패해도 메시지는 HTTP로 로드
+                  store.dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
                 }
-                
-                // 3. 메시지 로드 (WebSocket 연결과 독립적으로 실행)
-                store.dispatch(LoadChatMessagesAction(widget.roomId, refresh: true));
               },
               converter: (store) => _ViewModel.fromStore(store, widget.roomId),
               distinct: true,
@@ -148,7 +150,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       );
                     }
                     final message = vm.messages[index];
-                    final isMe = vm.myUserId != null && message.senderId.id.toString() == vm.myUserId;
+                    // ID로 비교하거나, ID가 없으면 이메일로 비교
+                    final isMe = vm.myUserId != null && 
+                        (message.senderId.id.toString() == vm.myUserId ||
+                         message.email == vm.myEmail);
+                    
+                    // 디버깅용 로그
+                    if (index == 0) { // 최신 메시지에 대해서만 로그 출력
+                      print('🔍 메시지 소유권 확인:');
+                      print('  - myUserId: ${vm.myUserId} (타입: ${vm.myUserId.runtimeType})');
+                      print('  - myEmail: ${vm.myEmail}');
+                      print('  - senderId: ${message.senderId.id} (타입: ${message.senderId.id.runtimeType})');
+                      print('  - message.email: ${message.email}');
+                      print('  - ID 비교 결과: ${message.senderId.id.toString() == vm.myUserId}');
+                      print('  - 이메일 비교 결과: ${message.email == vm.myEmail}');
+                      print('  - isMe: $isMe');
+                      print('  - 메시지 내용: "${message.content}"');
+                    }
                     return _MessageBubble(message: message, isMe: isMe);
                   },
                 );
@@ -215,26 +233,40 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isMe ? const Color(0xFFF2711C) : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+    return Padding(
+      padding: EdgeInsets.only(
+        left: isMe ? 50.0 : 0.0,  // 내 메시지는 왼쪽 여백 추가
+        right: isMe ? 0.0 : 50.0, // 상대 메시지는 오른쪽 여백 추가
+        top: 4.0,
+        bottom: 4.0,
+      ),
+      child: Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: isMe ? const Color(0xFFF2711C) : Colors.white, // 전송 버튼과 같은 색상
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(20),
+              topRight: const Radius.circular(20),
+              bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
+              bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08), 
+                blurRadius: 10, 
+                offset: const Offset(0, 2)
+              )
+            ],
           ),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 2))
-          ],
-        ),
-        child: Text(
-          message.content,
-          style: TextStyle(color: isMe ? Colors.white : Colors.black87),
+          child: Text(
+            message.content,
+            style: TextStyle(
+              color: isMe ? Colors.white : Colors.black87,
+              fontSize: 16,
+            ),
+          ),
         ),
       ),
     );
@@ -246,6 +278,7 @@ class _ViewModel {
   final List<MessageDto> messages;
   final bool hasMore;
   final String? myUserId;
+  final String? myEmail;
   final String? error;
 
   _ViewModel({
@@ -253,6 +286,7 @@ class _ViewModel {
     required this.messages, 
     required this.hasMore, 
     this.myUserId,
+    this.myEmail,
     this.error,
   });
 
@@ -277,6 +311,7 @@ class _ViewModel {
     final isEqual = isLoading == other.isLoading &&
         hasMore == other.hasMore &&
         myUserId == other.myUserId &&
+        myEmail == other.myEmail &&
         error == other.error;
         
     print('🔍 _ViewModel 비교 결과: $isEqual');
@@ -288,6 +323,7 @@ class _ViewModel {
     isLoading,
     hasMore,
     myUserId,
+    myEmail,
     error,
     messages.map((m) => m.id).join(),
   );
@@ -301,11 +337,15 @@ class _ViewModel {
       print('📋 최신 메시지: ${messages.first.content}');
     }
     
+    final user = store.state.userState.user;
+    print('🔍 현재 사용자 정보: id=${user?.id}, email=${user?.email}, name=${user?.name}');
+    
     return _ViewModel(
       isLoading: chatState.isLoading,
-      messages: List.of(messages)..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+      messages: List.of(messages), // reducer에서 이미 정렬되므로 추가 정렬 불필요
       hasMore: chatState.hasMoreMessages[roomId] ?? true,
-      myUserId: store.state.userState.user?.id.toString(),
+      myUserId: user?.id.toString(), // 실제 ID 사용
+      myEmail: user?.email, // 이메일도 함께 저장
       error: chatState.error,
     );
   }

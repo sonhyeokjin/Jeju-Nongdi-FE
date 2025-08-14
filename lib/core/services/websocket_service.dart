@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:jejunongdi/core/models/chat_models.dart';
+import 'package:jejunongdi/core/models/mentoring_models.dart';
 import 'package:jejunongdi/core/network/api_client.dart';
 import 'package:jejunongdi/core/utils/logger.dart';
 import 'package:jejunongdi/core/services/chat_service.dart';
@@ -219,9 +220,16 @@ class WebSocketService {
             Logger.info('STOMP 메시지 수신: ${frame.body}');
             if (frame.body != null) {
               final messageData = json.decode(frame.body!);
-              final message = MessageDto.fromJson(messageData);
-              print('📨 메시지 파싱 성공, 스트림에 추가: ${message.id}');
-              _messageController.add(message);
+              print('📊 WebSocket 메시지 원본: $messageData');
+              
+              // WebSocket 메시지를 MessageDto로 변환
+              final message = _convertWebSocketMessageToDto(messageData);
+              if (message != null) {
+                print('📨 메시지 파싱 성공, 스트림에 추가: ${message.id}');
+                _messageController.add(message);
+              } else {
+                print('❌ 메시지 변환 실패');
+              }
             }
           } catch (e) {
             print('❌ STOMP 메시지 파싱 실패: $e');
@@ -335,6 +343,61 @@ class WebSocketService {
     _currentRoomSubscription = null;
     _stompClient?.deactivate();
     _stompClient = null;
+  }
+
+  /// WebSocket 메시지를 MessageDto로 변환
+  MessageDto? _convertWebSocketMessageToDto(Map<String, dynamic> wsMessage) {
+    try {
+      // WebSocket 메시지 구조:
+      // {
+      //   "id": 19,
+      //   "roomId": "12_14",
+      //   "senderId": 14,
+      //   "receiverId": 12,
+      //   "email": null,
+      //   "content": "ㅎㅇ",
+      //   "createdAt": "2025-08-14T13:38:04.350721905",
+      //   "senderNickname": "소니",
+      //   "senderProfileImage": "https://..."
+      // }
+      
+      // MessageDto 구조에 맞게 변환
+      final senderId = wsMessage['senderId'];
+      final senderNickname = wsMessage['senderNickname'] ?? 'Unknown';
+      final senderProfileImage = wsMessage['senderProfileImage'];
+      
+      // UserResponse 객체 생성
+      final senderUserResponse = UserResponse(
+        id: senderId is int ? senderId : int.tryParse(senderId.toString()) ?? 0,
+        name: senderNickname,
+        email: wsMessage['email'],
+        profileImageUrl: senderProfileImage,
+      );
+      
+      // createdAt 파싱
+      DateTime createdAt;
+      try {
+        createdAt = DateTime.parse(wsMessage['createdAt']);
+      } catch (e) {
+        createdAt = DateTime.now();
+      }
+      
+      return MessageDto(
+        id: wsMessage['id'].toString(), // int를 String으로 변환
+        roomId: wsMessage['roomId'].toString(),
+        senderId: senderUserResponse,
+        email: wsMessage['email'] ?? '',
+        content: wsMessage['content'] ?? '',
+        messageType: wsMessage['messageType'] ?? 'TEXT',
+        createdAt: createdAt,
+        isRead: false, // WebSocket 메시지는 기본적으로 읽지 않음으로 처리
+        senderProfileImage: senderProfileImage,
+      );
+    } catch (e) {
+      print('❌ WebSocket 메시지 변환 오류: $e');
+      print('📊 변환 시도한 데이터: $wsMessage');
+      return null;
+    }
   }
 
   /// 리소스 정리

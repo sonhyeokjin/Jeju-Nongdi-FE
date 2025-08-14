@@ -74,6 +74,7 @@ _loadChatMessages(ChatService service) {
         hasMore: false, // 전체 메시지 조회이므로 hasMore는 false
         page: 0,
       ));
+      store.dispatch(SetChatLoadingAction(false));
     }).onFailure((error) {
       store.dispatch(SetChatErrorAction(error.message));
       store.dispatch(SetChatLoadingAction(false));

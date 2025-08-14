@@ -154,7 +154,10 @@ class ChatService {
           try {
             final item = messagesData[i];
             if (item is Map<String, dynamic>) {
-              messages.add(MessageDto.fromJson(item));
+              final convertedMessage = _convertApiMessageToDto(item);
+              if (convertedMessage != null) {
+                messages.add(convertedMessage);
+              }
             } else {
               print('❌ 메시지 데이터[$i]가 Map이 아님: ${item.runtimeType}');
               Logger.error('메시지 데이터[$i]가 Map 타입이 아닙니다: ${item.runtimeType}');
@@ -313,15 +316,92 @@ class ChatService {
           messageData = response.data!;
         }
         
-        final message = MessageDto.fromJson(messageData);
-        Logger.info('메시지 전송 성공');
-        return ApiResult.success(message);
+        final message = _convertApiMessageToDto(messageData);
+        if (message != null) {
+          Logger.info('메시지 전송 성공');
+          return ApiResult.success(message);
+        } else {
+          Logger.error('메시지 전송 응답 파싱 실패');
+          return ApiResult.failure(const UnknownException('메시지 전송 응답 파싱에 실패했습니다.'));
+        }
       } else {
         return ApiResult.failure(const UnknownException('메시지 전송 응답이 없습니다.'));
       }
     } catch (e) {
       Logger.error('메시지 전송 실패', error: e);
       return ApiResult.failure(e is ApiException ? e : UnknownException(e.toString()));
+    }
+  }
+
+  /// API 메시지를 MessageDto로 변환
+  MessageDto? _convertApiMessageToDto(Map<String, dynamic> apiMessage) {
+    try {
+      print('📊 API 메시지 원본: $apiMessage');
+      
+      // API 메시지 구조와 MessageDto 구조 차이를 처리
+      
+      // senderId가 int인지 UserResponse인지 확인
+      dynamic senderData = apiMessage['senderId'];
+      UserResponse senderUserResponse;
+      
+      if (senderData is int) {
+        // senderId가 int인 경우, 추가 정보로 UserResponse 생성
+        senderUserResponse = UserResponse(
+          id: senderData,
+          name: apiMessage['senderNickname'] ?? 'Unknown',
+          email: apiMessage['email'] ?? '',
+          profileImageUrl: apiMessage['senderProfileImage'],
+        );
+      } else if (senderData is Map<String, dynamic>) {
+        // senderId가 UserResponse 객체인 경우
+        senderUserResponse = UserResponse.fromJson(senderData);
+      } else {
+        print('❌ senderId 타입을 알 수 없음: ${senderData.runtimeType}');
+        return null;
+      }
+      
+      // id가 int인 경우 String으로 변환
+      String messageId;
+      dynamic idData = apiMessage['id'];
+      if (idData is int) {
+        messageId = idData.toString();
+      } else if (idData is String) {
+        messageId = idData;
+      } else {
+        print('❌ id 타입을 알 수 없음: ${idData.runtimeType}');
+        return null;
+      }
+      
+      // createdAt 파싱
+      DateTime createdAt;
+      try {
+        dynamic createdAtData = apiMessage['createdAt'] ?? apiMessage['sentAt'];
+        if (createdAtData is String) {
+          createdAt = DateTime.parse(createdAtData);
+        } else {
+          createdAt = DateTime.now();
+        }
+      } catch (e) {
+        print('⚠️ createdAt 파싱 실패, 현재 시간 사용: $e');
+        createdAt = DateTime.now();
+      }
+      
+      return MessageDto(
+        id: messageId,
+        roomId: apiMessage['roomId']?.toString() ?? '',
+        senderId: senderUserResponse,
+        email: apiMessage['email'] ?? '',
+        content: apiMessage['content'] ?? '',
+        messageType: apiMessage['messageType'] ?? 'TEXT',
+        createdAt: createdAt,
+        isRead: apiMessage['isRead'] ?? false,
+        fileUrl: apiMessage['fileUrl'],
+        senderProfileImage: apiMessage['senderProfileImage'],
+      );
+    } catch (e) {
+      print('❌ API 메시지 변환 오류: $e');
+      print('📊 변환 시도한 데이터: $apiMessage');
+      return null;
     }
   }
 }
